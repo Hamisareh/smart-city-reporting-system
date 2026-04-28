@@ -1,0 +1,103 @@
+services:
+  auth-service:
+    build: ./auth_service
+    container_name: auth-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=auth_service.settings
+      - TZ=Africa/Algiers
+    volumes:
+      - ./auth_service:/app
+    networks:
+      - smart-city-network
+    command: python manage.py runserver 0.0.0.0:8000
+
+  report-service:
+    build: ./report_service
+    container_name: report-service
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=report_service.settings
+      - TZ=Africa/Algiers
+    volumes:
+      - ./report_service:/app
+      - ./report_service/media:/app/media
+    networks:
+      - smart-city-network
+    depends_on:
+      - rabbitmq
+    command: python manage.py runserver 0.0.0.0:8001
+
+  notification-service:
+    build: ./notification_service
+    container_name: notification-service
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=notification_service.settings
+      - TZ=Africa/Algiers
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RUN_MAIN=true
+    volumes:
+      - ./notification_service:/app
+    networks:
+      - smart-city-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: python manage.py runserver 0.0.0.0:5000
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - auth-service
+      - report-service
+      - notification-service
+    networks:
+      - smart-city-network
+
+  consul:
+    image: hashicorp/consul:latest
+    container_name: consul
+    command: agent -dev -client=0.0.0.0
+    ports:
+      - "8500:8500"
+    networks:
+      - smart-city-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - smart-city-network
+
+networks:
+  smart-city-network:
+    driver: bridge

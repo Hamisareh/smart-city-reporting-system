@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart City</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: block;
+            padding: 0;
+        }
+
+        .notification-badge-small {
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>🏙️ Smart City</h2>
+                <p>Reporting System</p>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" id="nav-dashboard">
+                    <a href="#" onclick="showSection('dashboard')">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-create-report" style="display: none;">
+                    <a href="#" onclick="showSection('create-report')">
+                        <span class="nav-icon">📝</span>
+                        <span class="nav-text">Créer un signalement</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-my-reports" style="display: none;">
+                    <a href="#" onclick="showSection('my-reports')">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Mes signalements</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-all-reports" style="display: none;">
+                    <a href="#" onclick="showSection('all-reports')">
+                        <span class="nav-icon">🗂️</span>
+                        <span class="nav-text">Tous les signalements</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-categories" style="display: none;">
+                    <a href="#" onclick="showSection('categories')">
+                        <span class="nav-icon">🏷️</span>
+                        <span class="nav-text">Gérer catégories</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-users" style="display: none;">
+                    <a href="#" onclick="showSection('users')">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Gérer utilisateurs</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-notifications" style="display: none;">
+                    <a href="#" onclick="showSection('notifications')">
+                        <span class="nav-icon">🔔</span>
+                        <span class="nav-text">Notifications</span>
+                        <span id="sidebarNotifBadge" class="notification-badge-small" style="display: none;">0</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <h2 class="page-title" id="pageTitle">Dashboard</h2>
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <span id="userName"></span>
+                    <button class="logout-btn" onclick="logout()">🚪 Déconnexion</button>
+                </div>
+            </div>
+
+            <!-- Section Dashboard -->
+            <div id="dashboard-section">
+                <div class="stats-grid" id="statsGrid"></div>
+                <div class="content-card">
+                    <h3>📊 Aperçu</h3>
+                    <p id="welcomeMessage"></p>
+                </div>
+            </div>
+
+            <!-- Section Créer signalement -->
+            <div id="create-report-section" style="display: none;">
+                <div class="content-card">
+                    <h3>📝 Nouveau signalement</h3>
+                    <form id="reportForm">
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>📝 Description <span style="color: red;">*</span></label>
+                            <textarea id="description" rows="4" placeholder="Décrivez le problème..."
+                                required></textarea>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>📍 Latitude <span style="color: red;">*</span></label>
+                            <input type="number" step="any" id="latitude" placeholder="Ex: 36.7538" required>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>📍 Longitude <span style="color: red;">*</span></label>
+                            <input type="number" step="any" id="longitude" placeholder="Ex: 3.0588" required>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>📂 Catégorie <span style="color: red;">*</span></label>
+                            <select id="category" required>
+                                <option value="">-- Sélectionner une catégorie --</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>⚡ Priorité</label>
+                            <select id="priority">
+                                <option value="low">🟢 Basse</option>
+                                <option value="medium" selected>🟡 Moyenne</option>
+                                <option value="high">🔴 Haute</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>📸 Images (optionnel)</label>
+                            <input type="file" id="images" multiple accept="image/*">
+                            <small>Vous pouvez sélectionner plusieurs images</small>
+                        </div>
+
+                        <button type="submit" class="btn-primary">📤 Envoyer le signalement</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Section Mes signalements -->
+            <div id="my-reports-section" style="display: none;">
+                <div class="content-card">
+                    <h3>📋 Mes signalements</h3>
+                    <div id="myReportsList">Chargement...</div>
+                </div>
+            </div>
+
+            <!-- Section Tous les signalements -->
+            <div id="all-reports-section" style="display: none;">
+                <div class="content-card">
+                    <h3>🗂️ Tous les signalements</h3>
+                    <div id="allReportsList">Chargement...</div>
+                </div>
+            </div>
+
+            <!-- Section Gérer catégories -->
+            <div id="categories-section" style="display: none;">
+                <div class="content-card">
+                    <h3>🏷️ Gérer les catégories</h3>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px;">
+                        <h4>➕ Ajouter une catégorie</h4>
+                        <form id="addCategoryForm" class="flex-form">
+                            <div class="input-group">
+                                <input type="text" id="categoryName" placeholder="Nom de la catégorie" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Ajouter</button>
+                        </form>
+                        <div id="categoryMessage" style="margin-top: 10px;"></div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nom</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoriesList">
+                                <tr>
+                                    <td colspan="3">Chargement...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Gérer utilisateurs -->
+            <div id="users-section" style="display: none;">
+                <div class="content-card">
+                    <h3>👥 Gérer les utilisateurs</h3>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px;">
+                        <h4>➕ Créer un nouvel Admin</h4>
+                        <form id="createAdminForm" class="flex-form">
+                            <div class="input-group">
+                                <input type="text" id="adminUsername" placeholder="Username" required>
+                            </div>
+                            <div class="input-group">
+                                <input type="email" id="adminEmail" placeholder="Email" required>
+                            </div>
+                            <div class="input-group">
+                                <input type="password" id="adminPassword" placeholder="Password" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Créer Admin</button>
+                        </form>
+                        <div id="adminMessage" style="margin-top: 10px;"></div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px;">
+                        <h4>🔍 Filtrer les utilisateurs</h4>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn active" data-filter="all"
+                                onclick="filterUsers('all')">👥 Tous</button>
+                            <button type="button" class="filter-btn" data-filter="user" onclick="filterUsers('user')">👤
+                                Citoyens</button>
+                            <button type="button" class="filter-btn" data-filter="admin"
+                                onclick="filterUsers('admin')">🛡️ Admins</button>
+                            <button type="button" class="filter-btn" data-filter="superadmin"
+                                onclick="filterUsers('superadmin')">👑 Super Admins</button>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Rôle</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Notifications -->
+            <div id="notifications-section" style="display: none;">
+                <div class="content-card">
+                    <h3>🔔 Toutes les notifications</h3>
+                    <div id="allNotificationsList">Chargement...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let currentUser = null;
+        let currentFilter = 'all';
+        let allUsers = [];
+        let notifications = [];
+        let unreadCount = 0;
+        let notificationInterval = null;
+
+        function configureSidebar() {
+            const role = getUserRole();
+
+            const navCreateReport = document.getElementById('nav-create-report');
+            const navMyReports = document.getElementById('nav-my-reports');
+            const navAllReports = document.getElementById('nav-all-reports');
+            const navCategories = document.getElementById('nav-categories');
+            const navUsers = document.getElementById('nav-users');
+            const navNotifications = document.getElementById('nav-notifications');
+
+            if (navCreateReport) navCreateReport.style.display = 'none';
+            if (navMyReports) navMyReports.style.display = 'none';
+            if (navAllReports) navAllReports.style.display = 'none';
+            if (navCategories) navCategories.style.display = 'none';
+            if (navUsers) navUsers.style.display = 'none';
+            if (navNotifications) navNotifications.style.display = 'none';
+
+            if (role === 'user') {
+                if (navCreateReport) navCreateReport.style.display = 'block';
+                if (navMyReports) navMyReports.style.display = 'block';
+                if (navNotifications) navNotifications.style.display = 'block';
+            } else if (role === 'admin') {
+                if (navAllReports) navAllReports.style.display = 'block';
+                if (navNotifications) navNotifications.style.display = 'block';
+            } else if (role === 'superadmin') {
+                if (navAllReports) navAllReports.style.display = 'block';
+                if (navCategories) navCategories.style.display = 'block';
+                if (navUsers) navUsers.style.display = 'block';
+                if (navNotifications) navNotifications.style.display = 'block';
+            }
+        }
+
+        function showSection(section) {
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('create-report-section').style.display = 'none';
+            document.getElementById('my-reports-section').style.display = 'none';
+            document.getElementById('all-reports-section').style.display = 'none';
+            document.getElementById('categories-section').style.display = 'none';
+            document.getElementById('users-section').style.display = 'none';
+            document.getElementById('notifications-section').style.display = 'none';
+
+            document.getElementById(`${section}-section`).style.display = 'block';
+
+            const titles = {
+                'dashboard': 'Dashboard',
+                'create-report': 'Créer un signalement',
+                'my-reports': 'Mes signalements',
+                'all-reports': 'Tous les signalements',
+                'categories': 'Gérer catégories',
+                'users': 'Gérer utilisateurs',
+                'notifications': 'Notifications'
+            };
+            document.getElementById('pageTitle').innerText = titles[section];
+
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const navItem = document.getElementById(`nav-${section}`);
+            if (navItem) navItem.classList.add('active');
+
+            if (section === 'my-reports') loadMyReports();
+            if (section === 'all-reports') loadAllReports();
+            if (section === 'categories') loadCategories();
+            if (section === 'users') loadUsersTable();
+            if (section === 'notifications') loadAllNotifications();
+        }
+
+        async function loadUserInfo() {
+            const token = getToken();
+            if (!token) { logout(); return; }
+
+            try {
+                const response = await fetch(`${API_URL}/profile/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    currentUser = await response.json();
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    document.getElementById('userName').innerText = currentUser.username;
+                    document.getElementById('userAvatar').innerText = currentUser.username.charAt(0).toUpperCase();
+
+                    configureSidebar();
+                    loadDashboardStats();
+                    loadCategoriesSelect();
+                    loadNotifications();
+                    startNotificationPolling();
+                } else {
+                    logout();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadDashboardStats() {
+            const statsGrid = document.getElementById('statsGrid');
+            const welcomeMsg = document.getElementById('welcomeMessage');
+            const role = getUserRole();
+
+            if (role === 'admin' || role === 'superadmin') {
+                try {
+                    const reports = await getAllReports();
+                    const total = reports.length;
+                    const pending = reports.filter(r => r.status === 'pending').length;
+                    const inProgress = reports.filter(r => r.status === 'in_progress').length;
+                    const resolved = reports.filter(r => r.status === 'resolved').length;
+
+                    statsGrid.innerHTML = `
+                        <div class="stat-card"><h3>📊 Total</h3><div class="number">${total}</div><p>signalements</p></div>
+                        <div class="stat-card"><h3>⏳ En attente</h3><div class="number">${pending}</div></div>
+                        <div class="stat-card"><h3>🔄 En cours</h3><div class="number">${inProgress}</div></div>
+                        <div class="stat-card"><h3>✅ Résolus</h3><div class="number">${resolved}</div></div>
+                    `;
+                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} ! Voici les statistiques des signalements.`;
+                } catch (e) {
+                    statsGrid.innerHTML = '<div class="stat-card"><p>⚠️ Report Service non disponible</p></div>';
+                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} !`;
+                }
+            } else {
+                try {
+                    const myReports = await getUserReports();
+                    statsGrid.innerHTML = `
+                        <div class="stat-card"><h3>📋 Mes signalements</h3><div class="number">${myReports.length}</div></div>
+                        <div class="stat-card"><h3>👤 Mon rôle</h3><div class="number">${role}</div></div>
+                    `;
+                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} ! Vous pouvez créer un signalement.`;
+                } catch (e) {
+                    statsGrid.innerHTML = '<div class="stat-card"><p>⚠️ Service non disponible</p></div>';
+                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} !`;
+                }
+            }
+        }
+
+        async function loadAllReports() {
+            const container = document.getElementById('allReportsList');
+            if (!container) return;
+
+            container.innerHTML = '<p>Chargement des signalements...</p>';
+
+            try {
+                const reports = await getAllReports();
+                console.log('📋 loadAllReports received:', reports.length, 'reports');
+
+                if (reports.length === 0) {
+                    container.innerHTML = '<p>Aucun signalement trouvé.</p>';
+                    return;
+                }
+
+                container.innerHTML = reports.map(r => `
+                    <div class="report-item" data-report-id="${r.id}">
+                        <p><strong>📝 ${escapeHtml(r.description)}</strong></p>
+                        <p>📍 ${r.latitude}, ${r.longitude}</p>
+                        <p>👤 User ID: ${r.user_id}</p>
+                        <p>📅 ${new Date(r.created_at).toLocaleDateString()}</p>
+                        <p>Status: 
+                            <select onchange="updateStatus(${r.id}, this.value)">
+                                <option value="pending" ${r.status === 'pending' ? 'selected' : ''}>En attente</option>
+                                <option value="in_progress" ${r.status === 'in_progress' ? 'selected' : ''}>En cours</option>
+                                <option value="resolved" ${r.status === 'resolved' ? 'selected' : ''}>Résolu</option>
+                            </select>
+                        </p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('❌ loadAllReports error:', error);
+                container.innerHTML = '<p>Erreur lors du chargement des signalements. Vérifiez votre connexion.</p>';
+            }
+        }
+
+        async function loadMyReports() {
+            const container = document.getElementById('myReportsList');
+            if (!container) return;
+
+            container.innerHTML = '<p>Chargement de vos signalements...</p>';
+
+            try {
+                const reports = await getUserReports();
+                console.log('📋 loadMyReports received:', reports.length, 'reports');
+
+                if (reports.length === 0) {
+                    container.innerHTML = '<p>Vous n\'avez pas encore créé de signalement.</p>';
+                    return;
+                }
+
+                container.innerHTML = reports.map(r => `
+                    <div class="report-item" data-report-id="${r.id}">
+                        <p><strong>📝 ${escapeHtml(r.description)}</strong></p>
+                        <p>📍 ${r.latitude}, ${r.longitude}</p>
+                        <p>📅 ${new Date(r.created_at).toLocaleDateString()}</p>
+                        <p>Status: <span class="status status-${r.status}">${r.status === 'pending' ? 'En attente' : (r.status === 'in_progress' ? 'En cours' : 'Résolu')}</span></p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('❌ loadMyReports error:', error);
+                container.innerHTML = '<p>Erreur lors du chargement de vos signalements.</p>';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function updateStatus(reportId, newStatus) {
+            console.log(`🔄 Updating report ${reportId} to status: ${newStatus}`);
+
+            const success = await updateReportStatus(reportId, newStatus);
+
+            if (success) {
+                console.log('✅ Status updated successfully');
+
+                const role = getUserRole();
+
+                if (role === 'admin' || role === 'superadmin') {
+                    // Mise à jour locale : changer le statut dans l'interface sans recharger
+                    const select = document.querySelector(`.report-item[data-report-id="${reportId}"] select`);
+                    if (select) {
+                        select.value = newStatus;
+                    }
+                    // Recharger les stats seulement
+                    await loadDashboardStats();
+                } else if (role === 'user') {
+                    await loadMyReports();
+                    await loadDashboardStats();
+                }
+
+                setTimeout(() => loadNotifications(), 1000);
+            } else {
+                console.error('❌ Failed to update status');
+                alert('❌ Erreur lors de la mise à jour du statut');
+            }
+        }
+
+        function filterUsers(role) {
+            currentFilter = role;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-filter') === role) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            let filteredUsers = [];
+            if (role === 'all') {
+                filteredUsers = allUsers;
+            } else {
+                filteredUsers = allUsers.filter(user => user.role === role);
+            }
+            displayUsersTable(filteredUsers);
+        }
+
+        function displayUsersTable(users) {
+            const tbody = document.getElementById('usersTableBody');
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">Aucun utilisateur trouvé</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.username}</td>
+                    <td>${u.email || '-'}</td>
+                    <td><span class="role-badge role-${u.role}">${u.role === 'superadmin' ? 'Super Admin' : (u.role === 'admin' ? 'Admin' : 'Citoyen')}</span></td>
+                    <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                    <td>
+                        ${u.role !== 'superadmin' ? `<button onclick="deleteUserById(${u.id})" style="background:#e74c3c; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>` : '<span style="color:#aaa;">Non supprimable</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadUsersTable() {
+            try {
+                allUsers = await getAllUsers();
+                filterUsers(currentFilter);
+            } catch (e) {
+                console.error(e);
+                document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="6">Erreur de chargement</td></tr>';
+            }
+        }
+
+        async function deleteUserById(userId) {
+            if (!confirm('Supprimer cet utilisateur ?')) return;
+            const success = await deleteUser(userId);
+            if (success) {
+                loadUsersTable();
+                loadDashboardStats();
+            } else {
+                alert('❌ Erreur');
+            }
+        }
+
+        async function loadCategories() {
+            const container = document.getElementById('categoriesList');
+            try {
+                const categories = await getAllCategories();
+                if (categories.length === 0) {
+                    container.innerHTML = '<tr><td colspan="3">Aucune catégorie</td></tr>';
+                    return;
+                }
+                container.innerHTML = categories.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td>${c.name}</td>
+                        <td>
+                            <button onclick="deleteCategoryById(${c.id})" style="background:#e74c3c; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<tr><td colspan="3">Erreur</td></tr>';
+            }
+        }
+
+        async function deleteCategoryById(categoryId) {
+            if (!confirm('Supprimer cette catégorie ?')) return;
+            const success = await deleteCategory(categoryId);
+            if (success) {
+                loadCategories();
+                loadCategoriesSelect();
+            } else {
+                alert('❌ Erreur');
+            }
+        }
+
+        // ============ NOTIFICATIONS ============
+
+        async function loadNotifications() {
+            if (!currentUser?.id) return;
+
+            try {
+                notifications = await getNotifications(currentUser.id);
+                unreadCount = notifications.filter(n => !n.read).length;
+                updateSidebarBadge();
+            } catch (e) {
+                console.error('Erreur chargement notifications:', e);
+            }
+        }
+
+        function updateSidebarBadge() {
+            const sidebarBadge = document.getElementById('sidebarNotifBadge');
+            if (sidebarBadge) {
+                if (unreadCount > 0) {
+                    sidebarBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    sidebarBadge.style.display = 'inline-block';
+                } else {
+                    sidebarBadge.style.display = 'none';
+                }
+            }
+        }
+
+        async function loadAllNotifications() {
+            const container = document.getElementById('allNotificationsList');
+            if (!container) return;
+
+            await loadNotifications();
+
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="notification-empty">📭 Aucune notification</div>';
+                return;
+            }
+
+            container.innerHTML = notifications.map(notif => `
+                <div class="notification-item ${!notif.read ? 'unread' : ''}" onclick="handleNotificationClick(${notif.id}, ${notif.report_id || 'null'})">
+                    <p class="notification-message"><strong>${getNotificationTypeLabel(notif.type)}</strong><br>${escapeHtml(notif.message)}</p>
+                    <p class="notification-time">${new Date(notif.created_at).toLocaleString()}</p>
+                    ${!notif.read ? '<span class="notification-badge" style="position: static; display: inline-block; margin-left: 10px;">Nouveau</span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function getNotificationTypeLabel(type) {
+            switch (type) {
+                case 'REPORT_CREATED': return '📝 Signalement créé';
+                case 'REPORT_STATUS_CHANGED': return '🔄 Statut mis à jour';
+                default: return '📢 Notification';
+            }
+        }
+
+        async function handleNotificationClick(notificationId, reportId) {
+            await markNotificationAsRead(notificationId);
+
+            const notif = notifications.find(n => n.id === notificationId);
+            if (notif) notif.read = true;
+            unreadCount = notifications.filter(n => !n.read).length;
+            updateSidebarBadge();
+
+            if (reportId) {
+                const role = getUserRole();
+                if (role === 'admin' || role === 'superadmin') {
+                    showSection('all-reports');
+                } else {
+                    showSection('my-reports');
+                }
+            }
+        }
+
+        function startNotificationPolling() {
+            if (notificationInterval) clearInterval(notificationInterval);
+            notificationInterval = setInterval(async () => {
+                if (currentUser?.id) {
+                    await loadNotifications();
+                }
+            }, 30000);
+        }
+
+        function stopNotificationPolling() {
+            if (notificationInterval) {
+                clearInterval(notificationInterval);
+                notificationInterval = null;
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('reportForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = e.submitter || document.querySelector('#reportForm button[type="submit"]');
+            const originalText = submitBtn?.innerHTML;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '⏳ Envoi en cours...';
+            }
+
+            try {
+                const imagesInput = document.getElementById('images');
+                const images = imagesInput && imagesInput.files ? Array.from(imagesInput.files) : [];
+
+                const categoryValue = document.getElementById('category').value;
+                if (!categoryValue) {
+                    alert('❌ Veuillez sélectionner une catégorie');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                    return;
+                }
+
+                const reportData = {
+                    description: document.getElementById('description').value,
+                    latitude: parseFloat(document.getElementById('latitude').value),
+                    longitude: parseFloat(document.getElementById('longitude').value),
+                    category: parseInt(categoryValue),
+                    priority: document.getElementById('priority').value,
+                    images: images
+                };
+
+                const success = await createReport(reportData);
+
+                if (success) {
+                    alert('✅ Signalement créé avec succès !');
+                    document.getElementById('reportForm').reset();
+                    if (imagesInput) imagesInput.value = '';
+                    showSection('my-reports');
+                    loadDashboardStats();
+                    loadMyReports();
+                    setTimeout(() => loadNotifications(), 2000);
+                } else {
+                    alert('❌ Erreur lors de la création du signalement.');
+                }
+            } catch (error) {
+                console.error('❌ Unexpected error:', error);
+                alert('❌ Erreur inattendue: ' + error.message);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            }
+        });
+
+        document.getElementById('createAdminForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const success = await createAdmin({
+                username: document.getElementById('adminUsername').value,
+                email: document.getElementById('adminEmail').value,
+                password: document.getElementById('adminPassword').value
+            });
+            const msgDiv = document.getElementById('adminMessage');
+            if (success) {
+                msgDiv.innerHTML = '<span style="color:green;">✅ Admin créé</span>';
+                document.getElementById('createAdminForm').reset();
+                loadUsersTable();
+                loadDashboardStats();
+                setTimeout(() => msgDiv.innerHTML = '', 3000);
+            } else {
+                msgDiv.innerHTML = '<span style="color:red;">❌ Erreur</span>';
+            }
+        });
+
+        document.getElementById('addCategoryForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('categoryName').value;
+            const msgDiv = document.getElementById('categoryMessage');
+
+            const success = await createCategory(name);
+            if (success) {
+                msgDiv.innerHTML = '<span style="color:green;">✅ Catégorie ajoutée</span>';
+                document.getElementById('addCategoryForm').reset();
+                loadCategories();
+                loadCategoriesSelect();
+                setTimeout(() => msgDiv.innerHTML = '', 2000);
+            } else {
+                msgDiv.innerHTML = '<span style="color:red;">❌ Erreur</span>';
+            }
+        });
+
+        checkAuth();
+        loadUserInfo();
+
+        window.addEventListener('beforeunload', function () {
+            stopNotificationPolling();
+        });
+    </script>
+</body>
+
+</html>

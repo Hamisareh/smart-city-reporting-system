@@ -1,0 +1,231 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Smart City</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .navbar {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .navbar h1 { color: #ffc107; }
+        .navbar button {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .card h3 { margin-bottom: 15px; color: #333; }
+        .btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-success { background: #28a745; }
+        .btn-danger { background: #dc3545; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #ffc107;
+            color: #333;
+        }
+        .status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending { background: #ffc107; color: #333; }
+        .status-in_progress { background: #17a2b8; color: white; }
+        .status-resolved { background: #28a745; color: white; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .stat-card h2 {
+            font-size: 2.5em;
+            color: #ffc107;
+        }
+        select, textarea {
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <h1>🛡️ Admin Panel - Gestion des Signalements</h1>
+            <div>
+                <button onclick="window.location.href='dashboard.html'">📊 Mon Dashboard</button>
+                <button onclick="logout()">🚪 Déconnexion</button>
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <h2 id="totalReports">0</h2>
+                <p>Total Signalements</p>
+            </div>
+            <div class="stat-card">
+                <h2 id="pendingReports">0</h2>
+                <p>En attente</p>
+            </div>
+            <div class="stat-card">
+                <h2 id="resolvedReports">0</h2>
+                <p>Résolus</p>
+            </div>
+        </div>
+
+        <!-- Liste des signalements -->
+        <div class="card">
+            <h3>📋 Tous les signalements</h3>
+            <div id="reportsList">
+                <p>Chargement...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const REPORT_API_URL = '/api/reports';
+        
+        function getToken() { return localStorage.getItem('access_token'); }
+        
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+        
+        async function loadReports() {
+            const token = getToken();
+            if (!token) return;
+            
+            try {
+                const response = await fetch(`${REPORT_API_URL}/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const reports = await response.json();
+                    const container = document.getElementById('reportsList');
+                    
+                    if (reports.length === 0) {
+                        container.innerHTML = '<p>Aucun signalement.</p>';
+                        return;
+                    }
+                    
+                    // Statistiques
+                    const total = reports.length;
+                    const pending = reports.filter(r => r.status === 'pending').length;
+                    const resolved = reports.filter(r => r.status === 'resolved').length;
+                    
+                    document.getElementById('totalReports').textContent = total;
+                    document.getElementById('pendingReports').textContent = pending;
+                    document.getElementById('resolvedReports').textContent = resolved;
+                    
+                    // Affichage des signalements
+                    container.innerHTML = reports.map(report => `
+                        <div class="card" style="margin-bottom: 15px;">
+                            <p><strong>📝 ${report.description}</strong></p>
+                            <p>📍 ${report.latitude}, ${report.longitude}</p>
+                            <p>👤 User ID: ${report.user_id}</p>
+                            <p>📅 ${new Date(report.created_at).toLocaleDateString()}</p>
+                            <p>Status: 
+                                <select id="status-${report.id}" onchange="updateStatus(${report.id})">
+                                    <option value="pending" ${report.status === 'pending' ? 'selected' : ''}>En attente</option>
+                                    <option value="in_progress" ${report.status === 'in_progress' ? 'selected' : ''}>En cours</option>
+                                    <option value="resolved" ${report.status === 'resolved' ? 'selected' : ''}>Résolu</option>
+                                </select>
+                            </p>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('reportsList').innerHTML = '<p>Erreur de chargement.</p>';
+                }
+            } catch (error) {
+                document.getElementById('reportsList').innerHTML = '<p>Erreur: Vérifiez que Report Service est démarré.</p>';
+            }
+        }
+        
+        async function updateStatus(reportId) {
+            const token = getToken();
+            const newStatus = document.getElementById(`status-${reportId}`).value;
+            
+            try {
+                const response = await fetch(`${REPORT_API_URL}/${reportId}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    alert('✅ Statut mis à jour!');
+                    loadReports(); // Recharger la liste
+                } else {
+                    alert('❌ Erreur lors de la mise à jour');
+                }
+            } catch (error) {
+                alert('❌ Erreur de connexion');
+            }
+        }
+        
+        // Vérifier si l'utilisateur est Admin ou Super Admin
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.role !== 'admin' && user.role !== 'superadmin') {
+            window.location.href = 'dashboard.html';
+        }
+        
+        loadReports();
+    </script>
+</body>
+</html>

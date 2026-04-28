@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Smart City</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="login-box">
+            <h2>🔐 Connexion</h2>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label>👤 Nom d'utilisateur</label>
+                    <input type="text" id="username" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label>🔒 Mot de passe</label>
+                    <input type="password" id="password" required autocomplete="current-password">
+                </div>
+                <button type="submit">Se connecter</button>
+                <p class="register-link">
+                    Pas encore de compte ? <a href="register.html">S'inscrire</a>
+                </p>
+            </form>
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        // Vérifier si déjà connecté
+        const token = getToken();
+        if (token) {
+            // Déjà connecté, rediriger directement
+            window.location.href = 'dashboard.html';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            const submitBtn = document.querySelector('button[type="submit"]');
+
+            // Désactiver le bouton pendant la connexion
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Connexion en cours...';
+
+            try {
+                const result = await login(username, password);
+
+                if (result.success) {
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = '✅ Connexion réussie ! Redirection...';
+
+                    // Vérifier que le token est bien stocké
+                    console.log('Token stocké:', localStorage.getItem('access_token'));
+                    console.log('User:', localStorage.getItem('user'));
+
+                    // Rediriger immédiatement (pas de setTimeout)
+                    window.location.href = 'dashboard.html';
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '❌ ' + result.error;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Se connecter';
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '❌ Erreur de connexion au serveur';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Se connecter';
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Django
+*.log
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db_*.sqlite3
+media/
+/static/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# Environment variables - IMPORTANT!
+.env
+.env.local
+.env.production
+
+# Secrets
+*.pem
+*.key
+*.crt
+
+# Frontend
+node_modules/
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.bak
+*.log

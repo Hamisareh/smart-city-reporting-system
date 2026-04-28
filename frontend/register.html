@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - Smart City</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <h2>📝 Inscription</h2>
+            <form id="registerForm">
+                <div class="input-group">
+                    <label>👤 Nom d'utilisateur</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="input-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="input-group">
+                    <label>🔒 Mot de passe</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="input-group">
+                    <label>📍 Ville</label>
+                    <input type="text" id="city">
+                </div>
+                <div class="input-group">
+                    <label>📞 Téléphone</label>
+                    <input type="text" id="phone">
+                </div>
+                <button type="submit">S'inscrire</button>
+                <p class="register-link">
+                    Déjà un compte ? <a href="login.html">Se connecter</a>
+                </p>
+            </form>
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                city: document.getElementById('city').value,
+                phone: document.getElementById('phone').value
+            };
+            
+            const messageDiv = document.getElementById('message');
+            const result = await register(userData);
+            
+            if (result.success) {
+                messageDiv.className = 'message success';
+                messageDiv.textContent = '✅ Inscription réussie ! Redirection vers connexion...';
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+            } else {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '❌ ' + result.error;
+            }
+        });
+    </script>
+</body>
+</html>
