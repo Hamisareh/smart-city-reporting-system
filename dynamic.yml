@@ -17,16 +17,12 @@ http:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/reports`) || PathPrefix(`/api/categories`)"
       priority: 10
-      # ⚠️ SUPPRIMEZ ce middleware - il bloque le header Authorization
-      # middlewares: ["forward-auth-header"]
       service: reports
 
     notifications:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/notification`)"
       priority: 10
-      # ⚠️ SUPPRIMEZ aussi ici
-      # middlewares: ["forward-auth-header"]
       service: notifications
 
     media:
@@ -40,12 +36,7 @@ http:
       replacePathRegex:
         regex: "^/api/auth/(.*)"
         replacement: "/api/$1"
-
-    # ⚠️ Supprimez ou commentez ce middleware
-    # forward-auth-header:
-    #   headers:
-    #     customRequestHeaders:
-    #       Authorization: ""
+        
 
   services:
     frontend:
