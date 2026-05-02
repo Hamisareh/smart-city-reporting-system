@@ -1,0 +1,15 @@
+# traefik.yml — Static configuration file
+# This replaces the Docker provider so Traefik doesn't need the Docker socket.
+# Routes are defined here directly pointing to each service by container name.
+
+api:
+  insecure: true  # Enable dashboard at http://localhost:8080
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true

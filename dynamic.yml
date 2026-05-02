@@ -1,0 +1,69 @@
+http:
+  routers:
+    frontend:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      service: frontend
+
+    auth:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/auth`)"
+      priority: 10
+      middlewares: ["auth-rewrite"]
+      service: auth
+
+    reports:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/reports`) || PathPrefix(`/api/categories`)"
+      priority: 10
+      # ⚠️ SUPPRIMEZ ce middleware - il bloque le header Authorization
+      # middlewares: ["forward-auth-header"]
+      service: reports
+
+    notifications:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/notification`)"
+      priority: 10
+      # ⚠️ SUPPRIMEZ aussi ici
+      # middlewares: ["forward-auth-header"]
+      service: notifications
+
+    media:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/media`)"
+      priority: 20
+      service: reports
+
+  middlewares:
+    auth-rewrite:
+      replacePathRegex:
+        regex: "^/api/auth/(.*)"
+        replacement: "/api/$1"
+
+    # ⚠️ Supprimez ou commentez ce middleware
+    # forward-auth-header:
+    #   headers:
+    #     customRequestHeaders:
+    #       Authorization: ""
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://nginx:80"
+
+    auth:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8000"
+
+    reports:
+      loadBalancer:
+        servers:
+          - url: "http://report-service:8001"
+
+    notifications:
+      loadBalancer:
+        servers:
+          - url: "http://notification-service:5000"

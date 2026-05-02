@@ -4,786 +4,889 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Smart City</title>
+    <title>Smart City — Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
     <style>
-        body {
-            display: block;
-            padding: 0;
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+        :root {
+            --primary: #1a3a5c;
+            --accent: #2ecc71;
+            --accent2: #f39c12;
+            --danger: #e74c3c;
+            --surface: #ffffff;
+            --surface2: #f4f7fb;
+            --border: #e0e8f0;
+            --text: #1a2f45;
+            --text2: #5a7d9a;
+            --cat-color: #2ecc71;
         }
 
-        .notification-badge-small {
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-left: auto;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--surface2); display: block; padding: 0; }
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+        .notification-badge-small { background: var(--danger); color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; margin-left: auto; }
+        .sidebar { width: 260px; background: var(--primary); color: white; padding: 0; position: fixed; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-header h2 { font-size: 18px; color: white; letter-spacing: -0.3px; }
+        .sidebar-header p { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+        .nav-menu { list-style: none; padding: 8px 12px; flex: 1; }
+        .nav-item a { display: flex; align-items: center; padding: 10px 14px; color: rgba(255,255,255,0.65); text-decoration: none; border-radius: 8px; gap: 10px; font-size: 14px; transition: all 0.18s; }
+        .nav-item a:hover { background: rgba(255,255,255,0.07); color: white; }
+        .nav-item.active a { background: var(--accent); color: white; }
+        .nav-icon { font-size: 16px; width: 22px; text-align: center; }
+        .main-content { margin-left: 260px; padding: 0; min-height: 100vh; }
+        .top-bar { background: white; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+        .page-title { font-size: 18px; color: var(--text); font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+        .user-info { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 36px; height: 36px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; }
+        .logout-btn { background: var(--danger); color: white; border: none; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-size: 13px; width: auto; }
+        .logout-btn:hover { background: #c0392b; transform: none; }
+        .page-body { padding: 28px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; border-top: 3px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .stat-card h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 8px; }
+        .stat-card .number { font-size: 32px; font-weight: 700; color: var(--text); font-family: 'Space Grotesk', sans-serif; }
+        .content-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px; }
+        .content-card h3 { font-size: 16px; color: var(--text); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--border); }
+        .categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 8px; }
+        .category-card { background: white; border: 2px solid var(--border); border-radius: 14px; padding: 22px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+        .category-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--cat-color, var(--accent)); }
+        .category-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(46,204,113,0.15); }
+        .category-card .cat-icon { font-size: 28px; margin-bottom: 10px; }
+        .category-card .cat-name { font-size: 16px; font-weight: 600; color: var(--text); font-family: 'Space Grotesk', sans-serif; }
+        .category-card .cat-count { font-size: 12px; color: var(--text2); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+        .cat-count-badge { background: var(--surface2); border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; color: var(--text); }
+        .cat-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .back-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; color: var(--text); width: auto; transition: all 0.15s; }
+        .back-btn:hover { background: var(--border); transform: none; }
+        .report-item { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; background: var(--surface2); transition: box-shadow 0.15s; }
+        .report-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+        .report-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 12px; }
+        .report-item-desc { font-weight: 500; color: var(--text); font-size: 14px; flex: 1; }
+        .report-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+        .report-meta span { font-size: 12px; color: var(--text2); }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .status-pending { background: #fef3cd; color: #856404; }
+        .status-in_progress { background: #cfe2ff; color: #084298; }
+        .status-resolved { background: #d1e7dd; color: #0a3622; }
+        .status-select { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: pointer; background: white; width: auto; }
+        .input-group { margin-bottom: 16px; }
+        .input-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: var(--text); }
+        input, textarea, select { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text); transition: border 0.15s; background: white; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+        .btn-primary { background: var(--accent); color: white; border: none; padding: 10px 22px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; width: auto; transition: all 0.15s; }
+        .btn-primary:hover { background: #27ae60; transform: translateY(-1px); }
+        .btn-danger { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; width: auto; }
+        .flex-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .flex-form .input-group { flex: 1; margin-bottom: 0; }
+        .flex-form button { width: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+        th { background: var(--primary); color: white; font-size: 12px; font-weight: 500; letter-spacing: 0.3px; }
+        .role-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .role-superadmin { background: #fee2e2; color: #991b1b; }
+        .role-admin { background: #fef3cd; color: #92400e; }
+        .role-user { background: #d1fae5; color: #065f46; }
+        .filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .filter-btn { padding: 6px 16px; border: 1.5px solid var(--border); border-radius: 20px; cursor: pointer; font-size: 13px; background: white; color: var(--text); width: auto; transition: all 0.15s; }
+        .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .notification-item { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; border-radius: 8px; margin-bottom: 6px; }
+        .notification-item:hover { background: var(--surface2); }
+        .notification-item.unread { background: #f0fdf4; border-left: 3px solid var(--accent); padding-left: 13px; }
+        .notification-message { margin: 0 0 4px; color: var(--text); font-size: 14px; }
+        .notification-time { font-size: 11px; color: var(--text2); margin: 0; }
+        .empty-state { text-align: center; padding: 50px 20px; color: var(--text2); }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .loading-text { color: var(--text2); font-size: 14px; padding: 20px 0; }
+        .notif-type-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .notif-REPORT_CREATED { background: #d1fae5; color: #065f46; }
+        .notif-NEW_REPORT_CREATED { background: #dbeafe; color: #1e40af; }
+        .notif-REPORT_STATUS_CHANGED { background: #fef3c7; color: #92400e; }
+        .view-img-btn { background: #f0f7ff; border: 1.5px solid #bee3f8; color: #2b6cb0; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer; width: auto; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+        .view-img-btn:hover { background: #bee3f8; transform: none; }
+        #imageModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
+        #imageModal.open { display: flex; }
+        #imageModal img { max-width: 90vw; max-height: 85vh; border-radius: 10px; object-fit: contain; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        #imageModal .modal-close { position: absolute; top: 18px; right: 22px; background: white; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: auto; padding: 0 12px; line-height: 36px; }
+        #imageModal .modal-close:hover { background: #f0f0f0; transform: none; }
+        #imageModal .modal-caption { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: white; padding: 6px 18px; border-radius: 20px; font-size: 13px; }
     </style>
 </head>
 
 <body>
-    <div class="dashboard-layout">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h2>🏙️ Smart City</h2>
-                <p>Reporting System</p>
-            </div>
-            <ul class="nav-menu">
-                <li class="nav-item active" id="nav-dashboard">
-                    <a href="#" onclick="showSection('dashboard')">
-                        <span class="nav-icon">📊</span>
-                        <span class="nav-text">Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-create-report" style="display: none;">
-                    <a href="#" onclick="showSection('create-report')">
-                        <span class="nav-icon">📝</span>
-                        <span class="nav-text">Créer un signalement</span>
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-my-reports" style="display: none;">
-                    <a href="#" onclick="showSection('my-reports')">
-                        <span class="nav-icon">📋</span>
-                        <span class="nav-text">Mes signalements</span>
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-all-reports" style="display: none;">
-                    <a href="#" onclick="showSection('all-reports')">
-                        <span class="nav-icon">🗂️</span>
-                        <span class="nav-text">Tous les signalements</span>
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-categories" style="display: none;">
-                    <a href="#" onclick="showSection('categories')">
-                        <span class="nav-icon">🏷️</span>
-                        <span class="nav-text">Gérer catégories</span>
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-users" style="display: none;">
-                    <a href="#" onclick="showSection('users')">
-                        <span class="nav-icon">👥</span>
-                        <span class="nav-text">Gérer utilisateurs</span>
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-notifications" style="display: none;">
-                    <a href="#" onclick="showSection('notifications')">
-                        <span class="nav-icon">🔔</span>
-                        <span class="nav-text">Notifications</span>
-                        <span id="sidebarNotifBadge" class="notification-badge-small" style="display: none;">0</span>
-                    </a>
-                </li>
-            </ul>
+<div class="dashboard-layout">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>🏙️ Smart City</h2>
+            <p id="sidebarRoleLabel">Reporting System</p>
         </div>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="top-bar">
-                <h2 class="page-title" id="pageTitle">Dashboard</h2>
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar"></div>
-                    <span id="userName"></span>
-                    <button class="logout-btn" onclick="logout()">🚪 Déconnexion</button>
-                </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" id="nav-dashboard"><a href="#" onclick="showSection('dashboard')"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a></li>
+            <li class="nav-item" id="nav-create-report" style="display:none;"><a href="#" onclick="showSection('create-report')"><span class="nav-icon">📝</span><span class="nav-text">Créer un signalement</span></a></li>
+            <li class="nav-item" id="nav-my-reports" style="display:none;"><a href="#" onclick="showSection('my-reports')"><span class="nav-icon">📋</span><span class="nav-text">Mes signalements</span></a></li>
+            <li class="nav-item" id="nav-by-category" style="display:none;"><a href="#" onclick="showSection('by-category')"><span class="nav-icon">🗂️</span><span class="nav-text">Par catégorie</span></a></li>
+            <li class="nav-item" id="nav-categories" style="display:none;"><a href="#" onclick="showSection('categories')"><span class="nav-icon">🏷️</span><span class="nav-text">Gérer catégories</span></a></li>
+            <li class="nav-item" id="nav-users" style="display:none;"><a href="#" onclick="showSection('users')"><span class="nav-icon">👥</span><span class="nav-text">Utilisateurs</span></a></li>
+            <li class="nav-item" id="nav-notifications" style="display:none;"><a href="#" onclick="showSection('notifications')"><span class="nav-icon">🔔</span><span class="nav-text">Notifications</span><span id="sidebarNotifBadge" class="notification-badge-small" style="display:none;">0</span></a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <h2 class="page-title" id="pageTitle">Dashboard</h2>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar"></div>
+                <span id="userName" style="font-size:14px; font-weight:500;"></span>
+                <button class="logout-btn" onclick="logout()">🚪 Déconnexion</button>
             </div>
-
-            <!-- Section Dashboard -->
+        </div>
+        <div class="page-body">
             <div id="dashboard-section">
                 <div class="stats-grid" id="statsGrid"></div>
-                <div class="content-card">
-                    <h3>📊 Aperçu</h3>
-                    <p id="welcomeMessage"></p>
-                </div>
+                <div class="content-card"><h3>📊 Aperçu</h3><p id="welcomeMessage" style="color:var(--text2); font-size:14px;"></p></div>
             </div>
-
-            <!-- Section Créer signalement -->
-            <div id="create-report-section" style="display: none;">
+            <div id="create-report-section" style="display:none;">
                 <div class="content-card">
                     <h3>📝 Nouveau signalement</h3>
                     <form id="reportForm">
-                        <div class="input-group" style="margin-bottom: 15px;">
-                            <label>📝 Description <span style="color: red;">*</span></label>
-                            <textarea id="description" rows="4" placeholder="Décrivez le problème..."
-                                required></textarea>
+                        <div class="input-group"><label>📝 Description <span style="color:red">*</span></label><textarea id="description" rows="4" placeholder="Décrivez le problème..." required></textarea></div>
+                        <div class="input-group">
+                            <label>📍 Localisation <span style="color:red">*</span></label>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                                <button type="button" id="geoBtn" class="btn-primary" style="padding:8px 14px; font-size:13px;" onclick="captureLocation()">📡 Utiliser ma position</button>
+                                <span id="geoStatus" style="font-size:13px; color:var(--text2);">Aucune position sélectionnée</span>
+                            </div>
+                            <input type="hidden" id="latitude" required>
+                            <input type="hidden" id="longitude" required>
+                            <div id="reportMapPicker" style="height:260px; border-radius:10px; border:1.5px solid var(--border); display:none;"></div>
+                            <p style="font-size:12px; color:var(--text2); margin-top:6px;" id="mapHint" style="display:none;">📌 Cliquez sur la carte pour ajuster la position.</p>
                         </div>
-
-                        <div class="input-group" style="margin-bottom: 15px;">
-                            <label>📍 Latitude <span style="color: red;">*</span></label>
-                            <input type="number" step="any" id="latitude" placeholder="Ex: 36.7538" required>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                            <div class="input-group"><label>📂 Catégorie <span style="color:red">*</span></label><select id="category" required><option value="">-- Sélectionner --</option></select></div>
+                            <div class="input-group"><label>⚡ Priorité</label><select id="priority"><option value="low">🟢 Basse</option><option value="medium" selected>🟡 Moyenne</option><option value="high">🔴 Haute</option></select></div>
                         </div>
-
-                        <div class="input-group" style="margin-bottom: 15px;">
-                            <label>📍 Longitude <span style="color: red;">*</span></label>
-                            <input type="number" step="any" id="longitude" placeholder="Ex: 3.0588" required>
-                        </div>
-
-                        <div class="input-group" style="margin-bottom: 15px;">
-                            <label>📂 Catégorie <span style="color: red;">*</span></label>
-                            <select id="category" required>
-                                <option value="">-- Sélectionner une catégorie --</option>
-                            </select>
-                        </div>
-
-                        <div class="input-group" style="margin-bottom: 15px;">
-                            <label>⚡ Priorité</label>
-                            <select id="priority">
-                                <option value="low">🟢 Basse</option>
-                                <option value="medium" selected>🟡 Moyenne</option>
-                                <option value="high">🔴 Haute</option>
-                            </select>
-                        </div>
-
-                        <div class="input-group" style="margin-bottom: 15px;">
-                            <label>📸 Images (optionnel)</label>
-                            <input type="file" id="images" multiple accept="image/*">
-                            <small>Vous pouvez sélectionner plusieurs images</small>
-                        </div>
-
+                        <div class="input-group"><label>📸 Images (optionnel)</label><input type="file" id="images" multiple accept="image/*"></div>
                         <button type="submit" class="btn-primary">📤 Envoyer le signalement</button>
                     </form>
                 </div>
             </div>
-
-            <!-- Section Mes signalements -->
-            <div id="my-reports-section" style="display: none;">
-                <div class="content-card">
-                    <h3>📋 Mes signalements</h3>
-                    <div id="myReportsList">Chargement...</div>
+            <div id="my-reports-section" style="display:none;"><div class="content-card"><h3>📋 Mes signalements</h3><div id="myReportsList"><p class="loading-text">Chargement...</p></div></div></div>
+            <div id="by-category-section" style="display:none;">
+                <div id="cat-list-view"><div class="content-card"><h3>🗂️ Signalements par catégorie</h3><div id="categoryCardsGrid" class="categories-grid"><p class="loading-text">Chargement...</p></div></div></div>
+                <div id="cat-detail-view" style="display:none;">
+                    <div class="content-card">
+                        <div class="cat-header"><button class="back-btn" onclick="backToCategoryList()">← Retour</button><h3 id="catDetailTitle" style="margin-bottom:0; border:none; padding:0;">Signalements</h3></div>
+                        <div class="filter-buttons" id="catStatusFilters">
+                            <button class="filter-btn active" data-status="all" onclick="filterCatReports('all')">🗂️ Tous</button>
+                            <button class="filter-btn" data-status="pending" onclick="filterCatReports('pending')">⏳ En attente</button>
+                            <button class="filter-btn" data-status="in_progress" onclick="filterCatReports('in_progress')">🔄 En cours</button>
+                            <button class="filter-btn" data-status="resolved" onclick="filterCatReports('resolved')">✅ Résolus</button>
+                        </div>
+                        <div id="catReportsList"><p class="loading-text">Chargement...</p></div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Section Tous les signalements -->
-            <div id="all-reports-section" style="display: none;">
-                <div class="content-card">
-                    <h3>🗂️ Tous les signalements</h3>
-                    <div id="allReportsList">Chargement...</div>
-                </div>
-            </div>
-
-            <!-- Section Gérer catégories -->
-            <div id="categories-section" style="display: none;">
+            <div id="categories-section" style="display:none;">
                 <div class="content-card">
                     <h3>🏷️ Gérer les catégories</h3>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px;">
-                        <h4>➕ Ajouter une catégorie</h4>
-                        <form id="addCategoryForm" class="flex-form">
-                            <div class="input-group">
-                                <input type="text" id="categoryName" placeholder="Nom de la catégorie" required>
-                            </div>
-                            <button type="submit" class="btn-primary">Ajouter</button>
-                        </form>
-                        <div id="categoryMessage" style="margin-top: 10px;"></div>
+                    <div style="background:var(--surface2); border-radius:10px; padding:16px; margin-bottom:20px;">
+                        <h4 style="margin-bottom:12px; font-size:14px;">➕ Ajouter une catégorie</h4>
+                        <form id="addCategoryForm" class="flex-form"><div class="input-group"><input type="text" id="categoryName" placeholder="Nom de la catégorie" required></div><button type="submit" class="btn-primary">Ajouter</button></form>
+                        <div id="categoryMessage" style="margin-top:10px; font-size:13px;"></div>
                     </div>
-
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nom</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="categoriesList">
-                                <tr>
-                                    <td colspan="3">Chargement...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Nom</th><th>Actions</th></td></thead><tbody id="categoriesList"><tr><td colspan="3">Chargement...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- Section Gérer utilisateurs -->
-            <div id="users-section" style="display: none;">
+            <div id="users-section" style="display:none;">
                 <div class="content-card">
                     <h3>👥 Gérer les utilisateurs</h3>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px;">
-                        <h4>➕ Créer un nouvel Admin</h4>
+                    <div style="background:var(--surface2); border-radius:10px; padding:16px; margin-bottom:20px;">
+                        <h4 style="margin-bottom:12px; font-size:14px;">➕ Créer un Admin</h4>
                         <form id="createAdminForm" class="flex-form">
-                            <div class="input-group">
-                                <input type="text" id="adminUsername" placeholder="Username" required>
-                            </div>
-                            <div class="input-group">
-                                <input type="email" id="adminEmail" placeholder="Email" required>
-                            </div>
-                            <div class="input-group">
-                                <input type="password" id="adminPassword" placeholder="Password" required>
-                            </div>
+                            <div class="input-group"><input type="text" id="adminUsername" placeholder="Username" required></div>
+                            <div class="input-group"><input type="email" id="adminEmail" placeholder="Email" autocomplete="email" required></div>
+                            <div class="input-group"><input type="password" id="adminPassword" placeholder="Mot de passe" autocomplete="new-password" required></div>
                             <button type="submit" class="btn-primary">Créer Admin</button>
                         </form>
-                        <div id="adminMessage" style="margin-top: 10px;"></div>
+                        <div id="adminMessage" style="margin-top:10px; font-size:13px;"></div>
                     </div>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px;">
-                        <h4>🔍 Filtrer les utilisateurs</h4>
-                        <div class="filter-buttons">
-                            <button type="button" class="filter-btn active" data-filter="all"
-                                onclick="filterUsers('all')">👥 Tous</button>
-                            <button type="button" class="filter-btn" data-filter="user" onclick="filterUsers('user')">👤
-                                Citoyens</button>
-                            <button type="button" class="filter-btn" data-filter="admin"
-                                onclick="filterUsers('admin')">🛡️ Admins</button>
-                            <button type="button" class="filter-btn" data-filter="superadmin"
-                                onclick="filterUsers('superadmin')">👑 Super Admins</button>
-                        </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all" onclick="filterUsers('all')">👥 Tous</button>
+                        <button class="filter-btn" data-filter="user" onclick="filterUsers('user')">👤 Citoyens</button>
+                        <button class="filter-btn" data-filter="admin" onclick="filterUsers('admin')">🛡️ Admins</button>
+                        <button class="filter-btn" data-filter="superadmin" onclick="filterUsers('superadmin')">👑 Super Admins</button>
                     </div>
-
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Username</th>
-                                    <th>Email</th>
-                                    <th>Rôle</th>
-                                    <th>Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersTableBody"></tbody>
-                        </table>
-                    </div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Rôle</th><th>Date</th><th>Actions</th></tr></thead><tbody id="usersTableBody"></tbody></table></div>
                 </div>
             </div>
-
-            <!-- Section Notifications -->
-            <div id="notifications-section" style="display: none;">
-                <div class="content-card">
-                    <h3>🔔 Toutes les notifications</h3>
-                    <div id="allNotificationsList">Chargement...</div>
-                </div>
-            </div>
+            <div id="notifications-section" style="display:none;"><div class="content-card"><h3>🔔 Notifications</h3><div id="allNotificationsList"><p class="loading-text">Chargement...</p></div></div></div>
         </div>
     </div>
+</div>
 
-    <script src="script.js"></script>
-    <script>
-        let currentUser = null;
-        let currentFilter = 'all';
-        let allUsers = [];
-        let notifications = [];
-        let unreadCount = 0;
-        let notificationInterval = null;
+<script src="script.js"></script>
+<script>
+let currentUser = null;
+let currentFilter = 'all';
+let allUsers = [];
+let notifications = [];
+let unreadCount = 0;
+let notificationInterval = null;
+let allCatReports = [];
+let currentCatFilter = 'all';
 
-        function configureSidebar() {
-            const role = getUserRole();
+function configureSidebar() {
+    const role = getUserRole();
+    const label = document.getElementById('sidebarRoleLabel');
+    if (label) label.textContent = role === 'superadmin' ? '👑 Super Admin' : role === 'admin' ? '🛡️ Admin' : '👤 Citoyen';
+    const ids = ['nav-create-report', 'nav-my-reports', 'nav-by-category', 'nav-categories', 'nav-users', 'nav-notifications'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    const show = (id) => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
+    if (role === 'user') {
+        show('nav-create-report');
+        show('nav-my-reports');
+        show('nav-notifications');
+    } else if (role === 'admin') {
+        show('nav-by-category');
+        show('nav-notifications');
+    } else if (role === 'superadmin') {
+        show('nav-by-category');
+        show('nav-categories');
+        show('nav-users');
+        show('nav-notifications');
+    }
+}
 
-            const navCreateReport = document.getElementById('nav-create-report');
-            const navMyReports = document.getElementById('nav-my-reports');
-            const navAllReports = document.getElementById('nav-all-reports');
-            const navCategories = document.getElementById('nav-categories');
-            const navUsers = document.getElementById('nav-users');
-            const navNotifications = document.getElementById('nav-notifications');
+function showSection(section) {
+    const sections = ['dashboard', 'create-report', 'my-reports', 'by-category', 'categories', 'users', 'notifications'];
+    sections.forEach(s => { const el = document.getElementById(`${s}-section`); if (el) el.style.display = 'none'; });
+    const target = document.getElementById(`${section}-section`);
+    if (target) target.style.display = 'block';
+    const titles = {
+        'dashboard': 'Dashboard',
+        'create-report': 'Créer un signalement',
+        'my-reports': 'Mes signalements',
+        'by-category': 'Signalements par catégorie',
+        'categories': 'Gérer catégories',
+        'users': 'Gérer utilisateurs',
+        'notifications': 'Notifications'
+    };
+    document.getElementById('pageTitle').innerText = titles[section] || section;
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    const nav = document.getElementById(`nav-${section}`);
+    if (nav) nav.classList.add('active');
+    if (section === 'my-reports') loadMyReports();
+    if (section === 'by-category') loadCategoryCards();
+    if (section === 'categories') loadCategories();
+    if (section === 'users') loadUsersTable();
+    if (section === 'notifications') loadAllNotifications();
+}
 
-            if (navCreateReport) navCreateReport.style.display = 'none';
-            if (navMyReports) navMyReports.style.display = 'none';
-            if (navAllReports) navAllReports.style.display = 'none';
-            if (navCategories) navCategories.style.display = 'none';
-            if (navUsers) navUsers.style.display = 'none';
-            if (navNotifications) navNotifications.style.display = 'none';
+async function loadUserInfo() {
+    const token = getToken();
+    if (!token) { logout(); return; }
+    try {
+        const response = await fetch(`${API_URL}/profile/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            currentUser = await response.json();
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            document.getElementById('userName').innerText = currentUser.username;
+            document.getElementById('userAvatar').innerText = currentUser.username.charAt(0).toUpperCase();
+            configureSidebar();
+            loadDashboardStats();
+            loadCategoriesSelect();
+            loadNotifications();
+            startNotificationPolling();
+        } else { logout(); }
+    } catch (e) { console.error(e); }
+}
 
-            if (role === 'user') {
-                if (navCreateReport) navCreateReport.style.display = 'block';
-                if (navMyReports) navMyReports.style.display = 'block';
-                if (navNotifications) navNotifications.style.display = 'block';
-            } else if (role === 'admin') {
-                if (navAllReports) navAllReports.style.display = 'block';
-                if (navNotifications) navNotifications.style.display = 'block';
-            } else if (role === 'superadmin') {
-                if (navAllReports) navAllReports.style.display = 'block';
-                if (navCategories) navCategories.style.display = 'block';
-                if (navUsers) navUsers.style.display = 'block';
-                if (navNotifications) navNotifications.style.display = 'block';
-            }
+async function loadDashboardStats() {
+    const statsGrid = document.getElementById('statsGrid');
+    const welcomeMsg = document.getElementById('welcomeMessage');
+    const role = getUserRole();
+    if (role === 'admin' || role === 'superadmin') {
+        try {
+            const reports = await getAllReports();
+            const cats = await getAllCategories();
+            const total = reports.length;
+            const pending = reports.filter(r => r.status === 'pending').length;
+            const inProgress = reports.filter(r => r.status === 'in_progress').length;
+            const resolved = reports.filter(r => r.status === 'resolved').length;
+            statsGrid.innerHTML = `
+                <div class="stat-card"><h3>📊 Total</h3><div class="number">${total}</div><p>signalements</p></div>
+                <div class="stat-card"><h3>⏳ En attente</h3><div class="number">${pending}</div></div>
+                <div class="stat-card"><h3>🔄 En cours</h3><div class="number">${inProgress}</div></div>
+                <div class="stat-card"><h3>✅ Résolus</h3><div class="number">${resolved}</div></div>
+                <div class="stat-card" style="border-top-color:var(--accent2);"><h3>🏷️ Catégories</h3><div class="number">${cats.length}</div></div>
+            `;
+            welcomeMsg.innerHTML = `Bienvenue <strong>${currentUser?.username}</strong> ! Sélectionnez une catégorie pour gérer les signalements.`;
+        } catch (e) {
+            statsGrid.innerHTML = '<div class="stat-card"><p>⚠️ Report Service non disponible</p></div>';
         }
-
-        function showSection(section) {
-            document.getElementById('dashboard-section').style.display = 'none';
-            document.getElementById('create-report-section').style.display = 'none';
-            document.getElementById('my-reports-section').style.display = 'none';
-            document.getElementById('all-reports-section').style.display = 'none';
-            document.getElementById('categories-section').style.display = 'none';
-            document.getElementById('users-section').style.display = 'none';
-            document.getElementById('notifications-section').style.display = 'none';
-
-            document.getElementById(`${section}-section`).style.display = 'block';
-
-            const titles = {
-                'dashboard': 'Dashboard',
-                'create-report': 'Créer un signalement',
-                'my-reports': 'Mes signalements',
-                'all-reports': 'Tous les signalements',
-                'categories': 'Gérer catégories',
-                'users': 'Gérer utilisateurs',
-                'notifications': 'Notifications'
-            };
-            document.getElementById('pageTitle').innerText = titles[section];
-
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            const navItem = document.getElementById(`nav-${section}`);
-            if (navItem) navItem.classList.add('active');
-
-            if (section === 'my-reports') loadMyReports();
-            if (section === 'all-reports') loadAllReports();
-            if (section === 'categories') loadCategories();
-            if (section === 'users') loadUsersTable();
-            if (section === 'notifications') loadAllNotifications();
+    } else {
+        try {
+            const myReports = await getUserReports();
+            const pending = myReports.filter(r => r.status === 'pending').length;
+            const resolved = myReports.filter(r => r.status === 'resolved').length;
+            statsGrid.innerHTML = `
+                <div class="stat-card"><h3>📋 Mes signalements</h3><div class="number">${myReports.length}</div></div>
+                <div class="stat-card"><h3>⏳ En attente</h3><div class="number">${pending}</div></div>
+                <div class="stat-card"><h3>✅ Résolus</h3><div class="number">${resolved}</div></div>
+            `;
+            welcomeMsg.innerHTML = `Bienvenue <strong>${currentUser?.username}</strong> ! Vous pouvez créer un signalement.`;
+        } catch (e) {
+            statsGrid.innerHTML = '<div class="stat-card"><p>⚠️ Service non disponible</p></div>';
         }
+    }
+}
 
-        async function loadUserInfo() {
-            const token = getToken();
-            if (!token) { logout(); return; }
+const catIcons = {
+    'voirie': '🛣️', 'route': '🛣️', 'road': '🛣️',
+    'éclairage': '💡', 'eclairage': '💡', 'lumière': '💡',
+    'déchets': '🗑️', 'dechets': '🗑️', 'ordures': '🗑️', 'propreté': '🗑️',
+    'eau': '💧', 'water': '💧',
+    'bruit': '📢', 'noise': '📢',
+    'transport': '🚌', 'bus': '🚌',
+    'sécurité': '🔒', 'securite': '🔒', 'safety': '🔒',
+    'parc': '🌳', 'jardin': '🌳', 'espace vert': '🌳',
+    'autre': '📌', 'other': '📌',
+    'spam': '🚫', 'violence': '⚠️', 'harcèlement': '🛑',
+};
 
-            try {
-                const response = await fetch(`${API_URL}/profile/`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (response.ok) {
-                    currentUser = await response.json();
-                    localStorage.setItem('user', JSON.stringify(currentUser));
-                    document.getElementById('userName').innerText = currentUser.username;
-                    document.getElementById('userAvatar').innerText = currentUser.username.charAt(0).toUpperCase();
+function getCatIcon(name) {
+    const lower = (name || '').toLowerCase();
+    for (const [key, icon] of Object.entries(catIcons)) {
+        if (lower.includes(key)) return icon;
+    }
+    return '📁';
+}
 
-                    configureSidebar();
-                    loadDashboardStats();
-                    loadCategoriesSelect();
-                    loadNotifications();
-                    startNotificationPolling();
-                } else {
-                    logout();
-                }
-            } catch (e) { console.error(e); }
+const catColors = ['#2ecc71', '#3498db', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+function getCatColor(idx) { return catColors[idx % catColors.length]; }
+
+async function loadCategoryCards() {
+    const grid = document.getElementById('categoryCardsGrid');
+    grid.innerHTML = '<p class="loading-text">Chargement des catégories...</p>';
+    document.getElementById('cat-list-view').style.display = 'block';
+    document.getElementById('cat-detail-view').style.display = 'none';
+    try {
+        const [categories, reports] = await Promise.all([getAllCategories(), getAllReports()]);
+        if (categories.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Aucune catégorie trouvée.</p></div>';
+            return;
         }
-
-        async function loadDashboardStats() {
-            const statsGrid = document.getElementById('statsGrid');
-            const welcomeMsg = document.getElementById('welcomeMessage');
-            const role = getUserRole();
-
-            if (role === 'admin' || role === 'superadmin') {
-                try {
-                    const reports = await getAllReports();
-                    const total = reports.length;
-                    const pending = reports.filter(r => r.status === 'pending').length;
-                    const inProgress = reports.filter(r => r.status === 'in_progress').length;
-                    const resolved = reports.filter(r => r.status === 'resolved').length;
-
-                    statsGrid.innerHTML = `
-                        <div class="stat-card"><h3>📊 Total</h3><div class="number">${total}</div><p>signalements</p></div>
-                        <div class="stat-card"><h3>⏳ En attente</h3><div class="number">${pending}</div></div>
-                        <div class="stat-card"><h3>🔄 En cours</h3><div class="number">${inProgress}</div></div>
-                        <div class="stat-card"><h3>✅ Résolus</h3><div class="number">${resolved}</div></div>
-                    `;
-                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} ! Voici les statistiques des signalements.`;
-                } catch (e) {
-                    statsGrid.innerHTML = '<div class="stat-card"><p>⚠️ Report Service non disponible</p></div>';
-                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} !`;
-                }
-            } else {
-                try {
-                    const myReports = await getUserReports();
-                    statsGrid.innerHTML = `
-                        <div class="stat-card"><h3>📋 Mes signalements</h3><div class="number">${myReports.length}</div></div>
-                        <div class="stat-card"><h3>👤 Mon rôle</h3><div class="number">${role}</div></div>
-                    `;
-                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} ! Vous pouvez créer un signalement.`;
-                } catch (e) {
-                    statsGrid.innerHTML = '<div class="stat-card"><p>⚠️ Service non disponible</p></div>';
-                    welcomeMsg.innerHTML = `Bienvenue ${currentUser?.username} !`;
-                }
-            }
-        }
-
-        async function loadAllReports() {
-            const container = document.getElementById('allReportsList');
-            if (!container) return;
-
-            container.innerHTML = '<p>Chargement des signalements...</p>';
-
-            try {
-                const reports = await getAllReports();
-                console.log('📋 loadAllReports received:', reports.length, 'reports');
-
-                if (reports.length === 0) {
-                    container.innerHTML = '<p>Aucun signalement trouvé.</p>';
-                    return;
-                }
-
-                container.innerHTML = reports.map(r => `
-                    <div class="report-item" data-report-id="${r.id}">
-                        <p><strong>📝 ${escapeHtml(r.description)}</strong></p>
-                        <p>📍 ${r.latitude}, ${r.longitude}</p>
-                        <p>👤 User ID: ${r.user_id}</p>
-                        <p>📅 ${new Date(r.created_at).toLocaleDateString()}</p>
-                        <p>Status: 
-                            <select onchange="updateStatus(${r.id}, this.value)">
-                                <option value="pending" ${r.status === 'pending' ? 'selected' : ''}>En attente</option>
-                                <option value="in_progress" ${r.status === 'in_progress' ? 'selected' : ''}>En cours</option>
-                                <option value="resolved" ${r.status === 'resolved' ? 'selected' : ''}>Résolu</option>
-                            </select>
-                        </p>
+        grid.innerHTML = categories.map((cat, idx) => {
+            const catReports = reports.filter(r => r.category === cat.id);
+            const pending = catReports.filter(r => r.status === 'pending').length;
+            const color = getCatColor(idx);
+            return `
+                <div class="category-card" style="--cat-color:${color}" onclick="openCategory(${cat.id}, '${escapeHtml(cat.name)}')">
+                    <div class="cat-icon">${getCatIcon(cat.name)}</div>
+                    <div class="cat-name">${escapeHtml(cat.name)}</div>
+                    <div class="cat-count">
+                        <span class="cat-count-badge">${catReports.length} signalement${catReports.length !== 1 ? 's' : ''}</span>
+                        ${pending > 0 ? `<span style="color:#e74c3c; font-size:11px;">• ${pending} en attente</span>` : ''}
                     </div>
-                `).join('');
-            } catch (error) {
-                console.error('❌ loadAllReports error:', error);
-                container.innerHTML = '<p>Erreur lors du chargement des signalements. Vérifiez votre connexion.</p>';
-            }
-        }
-
-        async function loadMyReports() {
-            const container = document.getElementById('myReportsList');
-            if (!container) return;
-
-            container.innerHTML = '<p>Chargement de vos signalements...</p>';
-
-            try {
-                const reports = await getUserReports();
-                console.log('📋 loadMyReports received:', reports.length, 'reports');
-
-                if (reports.length === 0) {
-                    container.innerHTML = '<p>Vous n\'avez pas encore créé de signalement.</p>';
-                    return;
-                }
-
-                container.innerHTML = reports.map(r => `
-                    <div class="report-item" data-report-id="${r.id}">
-                        <p><strong>📝 ${escapeHtml(r.description)}</strong></p>
-                        <p>📍 ${r.latitude}, ${r.longitude}</p>
-                        <p>📅 ${new Date(r.created_at).toLocaleDateString()}</p>
-                        <p>Status: <span class="status status-${r.status}">${r.status === 'pending' ? 'En attente' : (r.status === 'in_progress' ? 'En cours' : 'Résolu')}</span></p>
-                    </div>
-                `).join('');
-            } catch (error) {
-                console.error('❌ loadMyReports error:', error);
-                container.innerHTML = '<p>Erreur lors du chargement de vos signalements.</p>';
-            }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        async function updateStatus(reportId, newStatus) {
-            console.log(`🔄 Updating report ${reportId} to status: ${newStatus}`);
-
-            const success = await updateReportStatus(reportId, newStatus);
-
-            if (success) {
-                console.log('✅ Status updated successfully');
-
-                const role = getUserRole();
-
-                if (role === 'admin' || role === 'superadmin') {
-                    // Mise à jour locale : changer le statut dans l'interface sans recharger
-                    const select = document.querySelector(`.report-item[data-report-id="${reportId}"] select`);
-                    if (select) {
-                        select.value = newStatus;
-                    }
-                    // Recharger les stats seulement
-                    await loadDashboardStats();
-                } else if (role === 'user') {
-                    await loadMyReports();
-                    await loadDashboardStats();
-                }
-
-                setTimeout(() => loadNotifications(), 1000);
-            } else {
-                console.error('❌ Failed to update status');
-                alert('❌ Erreur lors de la mise à jour du statut');
-            }
-        }
-
-        function filterUsers(role) {
-            currentFilter = role;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                if (btn.getAttribute('data-filter') === role) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-
-            let filteredUsers = [];
-            if (role === 'all') {
-                filteredUsers = allUsers;
-            } else {
-                filteredUsers = allUsers.filter(user => user.role === role);
-            }
-            displayUsersTable(filteredUsers);
-        }
-
-        function displayUsersTable(users) {
-            const tbody = document.getElementById('usersTableBody');
-            if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6">Aucun utilisateur trouvé</td></tr>';
-                return;
-            }
-            tbody.innerHTML = users.map(u => `
-                <tr>
-                    <td>${u.id}</td>
-                    <td>${u.username}</td>
-                    <td>${u.email || '-'}</td>
-                    <td><span class="role-badge role-${u.role}">${u.role === 'superadmin' ? 'Super Admin' : (u.role === 'admin' ? 'Admin' : 'Citoyen')}</span></td>
-                    <td>${new Date(u.created_at).toLocaleDateString()}</td>
-                    <td>
-                        ${u.role !== 'superadmin' ? `<button onclick="deleteUserById(${u.id})" style="background:#e74c3c; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>` : '<span style="color:#aaa;">Non supprimable</span>'}
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadUsersTable() {
-            try {
-                allUsers = await getAllUsers();
-                filterUsers(currentFilter);
-            } catch (e) {
-                console.error(e);
-                document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="6">Erreur de chargement</td></tr>';
-            }
-        }
-
-        async function deleteUserById(userId) {
-            if (!confirm('Supprimer cet utilisateur ?')) return;
-            const success = await deleteUser(userId);
-            if (success) {
-                loadUsersTable();
-                loadDashboardStats();
-            } else {
-                alert('❌ Erreur');
-            }
-        }
-
-        async function loadCategories() {
-            const container = document.getElementById('categoriesList');
-            try {
-                const categories = await getAllCategories();
-                if (categories.length === 0) {
-                    container.innerHTML = '<tr><td colspan="3">Aucune catégorie</td></tr>';
-                    return;
-                }
-                container.innerHTML = categories.map(c => `
-                    <tr>
-                        <td>${c.id}</td>
-                        <td>${c.name}</td>
-                        <td>
-                            <button onclick="deleteCategoryById(${c.id})" style="background:#e74c3c; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (e) {
-                container.innerHTML = '<tr><td colspan="3">Erreur</td></tr>';
-            }
-        }
-
-        async function deleteCategoryById(categoryId) {
-            if (!confirm('Supprimer cette catégorie ?')) return;
-            const success = await deleteCategory(categoryId);
-            if (success) {
-                loadCategories();
-                loadCategoriesSelect();
-            } else {
-                alert('❌ Erreur');
-            }
-        }
-
-        // ============ NOTIFICATIONS ============
-
-        async function loadNotifications() {
-            if (!currentUser?.id) return;
-
-            try {
-                notifications = await getNotifications(currentUser.id);
-                unreadCount = notifications.filter(n => !n.read).length;
-                updateSidebarBadge();
-            } catch (e) {
-                console.error('Erreur chargement notifications:', e);
-            }
-        }
-
-        function updateSidebarBadge() {
-            const sidebarBadge = document.getElementById('sidebarNotifBadge');
-            if (sidebarBadge) {
-                if (unreadCount > 0) {
-                    sidebarBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                    sidebarBadge.style.display = 'inline-block';
-                } else {
-                    sidebarBadge.style.display = 'none';
-                }
-            }
-        }
-
-        async function loadAllNotifications() {
-            const container = document.getElementById('allNotificationsList');
-            if (!container) return;
-
-            await loadNotifications();
-
-            if (notifications.length === 0) {
-                container.innerHTML = '<div class="notification-empty">📭 Aucune notification</div>';
-                return;
-            }
-
-            container.innerHTML = notifications.map(notif => `
-                <div class="notification-item ${!notif.read ? 'unread' : ''}" onclick="handleNotificationClick(${notif.id}, ${notif.report_id || 'null'})">
-                    <p class="notification-message"><strong>${getNotificationTypeLabel(notif.type)}</strong><br>${escapeHtml(notif.message)}</p>
-                    <p class="notification-time">${new Date(notif.created_at).toLocaleString()}</p>
-                    ${!notif.read ? '<span class="notification-badge" style="position: static; display: inline-block; margin-left: 10px;">Nouveau</span>' : ''}
                 </div>
-            `).join('');
+            `;
+        }).join('');
+    } catch (e) {
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Erreur de chargement.</p></div>';
+    }
+}
+
+async function openCategory(catId, catName) {
+    document.getElementById('cat-list-view').style.display = 'none';
+    document.getElementById('cat-detail-view').style.display = 'block';
+    document.getElementById('catDetailTitle').innerHTML = `${getCatIcon(catName)} ${escapeHtml(catName)}`;
+    document.getElementById('pageTitle').innerText = catName;
+    const container = document.getElementById('catReportsList');
+    container.innerHTML = '<p class="loading-text">Chargement...</p>';
+    currentCatFilter = 'all';
+    document.querySelectorAll('#catStatusFilters .filter-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-status') === 'all');
+    });
+    try {
+        const reports = await getAllReports();
+        allCatReports = reports.filter(r => r.category === catId);
+        renderCatReports();
+    } catch (e) {
+        container.innerHTML = '<p>Erreur de chargement.</p>';
+    }
+}
+
+function backToCategoryList() {
+    document.getElementById('cat-list-view').style.display = 'block';
+    document.getElementById('cat-detail-view').style.display = 'none';
+    document.getElementById('pageTitle').innerText = 'Signalements par catégorie';
+}
+
+function filterCatReports(status) {
+    currentCatFilter = status;
+    document.querySelectorAll('#catStatusFilters .filter-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-status') === status);
+    });
+    renderCatReports();
+}
+
+function renderCatReports() {
+    const container = document.getElementById('catReportsList');
+    let reports = allCatReports;
+    if (currentCatFilter !== 'all') {
+        reports = reports.filter(r => r.status === currentCatFilter);
+    }
+    if (reports.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Aucun signalement pour ce filtre.</p></div>';
+        return;
+    }
+    container.innerHTML = reports.map(r => `
+        <div class="report-item" data-report-id="${r.id}">
+            <div class="report-item-header">
+                <div class="report-item-desc">📝 ${escapeHtml(r.description)}</div>
+                <select class="status-select" onchange="updateStatus(${r.id}, this.value)">
+                    <option value="pending" ${r.status === 'pending' ? 'selected' : ''}>⏳ En attente</option>
+                    <option value="in_progress" ${r.status === 'in_progress' ? 'selected' : ''}>🔄 En cours</option>
+                    <option value="resolved" ${r.status === 'resolved' ? 'selected' : ''}>✅ Résolu</option>
+                </select>
+            </div>
+            ${r.images && r.images.length > 0 ? `<div style="margin:8px 0;">${r.images.map((img, idx) => `<button class="view-img-btn" onclick="openImageModal('${getImageUrl(img.image)}', ${r.id}, ${idx})">🖼️ Voir image ${r.images.length > 1 ? idx+1 : ''}</button>`).join(' ')}</div>` : ''}
+            <div class="report-meta">
+                <span>👤 <span id="user-label-${r.id}">User #${r.user_id}</span></span>
+                <span>📅 ${new Date(r.created_at).toLocaleDateString()}</span>
+                <span>⚡ ${r.priority}</span>
+                <span><a href="https://www.google.com/maps?q=${r.latitude},${r.longitude}" target="_blank" style="color:var(--accent);">🗺️ Voir sur Google Maps</a></span>
+                <span class="status-badge status-${r.status}">${r.status === 'pending' ? 'En attente' : r.status === 'in_progress' ? 'En cours' : 'Résolu'}</span>
+            </div>
+        </div>
+    `).join('');
+    reports.forEach(r => {
+        getUserById(r.user_id).then(u => {
+            const el = document.getElementById(`user-label-${r.id}`);
+            if (el && u) el.innerHTML = `<strong>${escapeHtml(u.username)}</strong> &lt;${escapeHtml(u.email || '')}&gt;`;
+        });
+    });
+}
+
+async function loadMyReports() {
+    const container = document.getElementById('myReportsList');
+    if (!container) return;
+    container.innerHTML = '<p class="loading-text">Chargement...</p>';
+    try {
+        const reports = await getUserReports();
+        if (reports.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Vous n\'avez pas encore créé de signalement.</p></div>';
+            return;
         }
+        container.innerHTML = reports.map(r => `
+            <div class="report-item" data-report-id="${r.id}">
+                <div class="report-item-header">
+                    <div class="report-item-desc">📝 ${escapeHtml(r.description)}</div>
+                    <span class="status-badge status-${r.status}">${r.status === 'pending' ? 'En attente' : r.status === 'in_progress' ? 'En cours' : 'Résolu'}</span>
+                </div>
+                ${r.images && r.images.length > 0 ? `<div style="margin:8px 0;">${r.images.map((img, idx) => `<button class="view-img-btn" onclick="openImageModal('${getImageUrl(img.image)}', ${r.id}, ${idx})">🖼️ Voir image ${r.images.length > 1 ? idx+1 : ''}</button>`).join(' ')}</div>` : ''}
+                <div class="report-meta">
+                    <span><a href="https://www.google.com/maps?q=${r.latitude},${r.longitude}" target="_blank" style="color:var(--accent);">🗺️ Voir sur la carte</a></span>
+                    <span>📅 ${new Date(r.created_at).toLocaleDateString()}</span>
+                    <span>⚡ ${r.priority}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) { container.innerHTML = '<p>Erreur de chargement.</p>'; }
+}
 
-        function getNotificationTypeLabel(type) {
-            switch (type) {
-                case 'REPORT_CREATED': return '📝 Signalement créé';
-                case 'REPORT_STATUS_CHANGED': return '🔄 Statut mis à jour';
-                default: return '📢 Notification';
-            }
+async function updateStatus(reportId, newStatus) {
+    const success = await updateReportStatus(reportId, newStatus);
+    if (success) {
+        const updateInArray = (arr) => { const r = arr.find(r => r.id === reportId); if (r) r.status = newStatus; };
+        updateInArray(allCatReports);
+        await loadDashboardStats();
+        setTimeout(() => loadNotifications(), 1000);
+    } else {
+        alert('❌ Erreur lors de la mise à jour du statut');
+    }
+}
+
+async function loadCategories() {
+    const container = document.getElementById('categoriesList');
+    try {
+        const categories = await getAllCategories();
+        if (categories.length === 0) {
+            container.innerHTML = '<tr><td colspan="3" style="text-align:center;">Aucune catégorie</td></tr>';
+            return;
         }
+        container.innerHTML = categories.map(c => `
+            <tr><td>${c.id}</td><td>${getCatIcon(c.name)} ${escapeHtml(c.name)}</td><td><button class="btn-danger" onclick="deleteCategoryById(${c.id})">🗑️</button></td></tr>
+        `).join('');
+    } catch (e) { container.innerHTML = '<tr><td colspan="3">Erreur</td></tr>'; }
+}
 
-        async function handleNotificationClick(notificationId, reportId) {
-            await markNotificationAsRead(notificationId);
+async function deleteCategoryById(id) {
+    if (!confirm('Supprimer cette catégorie ?')) return;
+    const ok = await deleteCategory(id);
+    if (ok) { loadCategories(); loadCategoriesSelect(); }
+    else alert('❌ Erreur');
+}
 
-            const notif = notifications.find(n => n.id === notificationId);
-            if (notif) notif.read = true;
+async function loadUsersTable() {
+    try {
+        allUsers = await getAllUsers();
+        filterUsers(currentFilter);
+    } catch (e) {
+        document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="6">Erreur</td></tr>';
+    }
+}
+
+function filterUsers(role) {
+    currentFilter = role;
+    document.querySelectorAll('#users-section .filter-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-filter') === role);
+    });
+    const filtered = role === 'all' ? allUsers : allUsers.filter(u => u.role === role);
+    displayUsersTable(filtered);
+}
+
+function displayUsersTable(users) {
+    const tbody = document.getElementById('usersTableBody');
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun utilisateur</td></tr>';
+        return;
+    }
+    tbody.innerHTML = users.map(u => `
+        <tr>
+            <td>${u.id}</td>
+            <td>${u.username}</td>
+            <td>${u.email || '-'}</td>
+            <td><span class="role-badge role-${u.role}">${u.role === 'superadmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Citoyen'}</span></td>
+            <td>${new Date(u.created_at).toLocaleDateString()}</td>
+            <td>${u.role !== 'superadmin' ? `<button class="btn-danger" onclick="deleteUserById(${u.id})">🗑️</button>` : '<span style="color:var(--text2);">—</span>'}</td>
+        </tr>
+    `).join('');
+}
+
+async function deleteUserById(id) {
+    if (!confirm('Supprimer cet utilisateur ?')) return;
+    const ok = await deleteUser(id);
+    if (ok) { loadUsersTable(); loadDashboardStats(); }
+    else alert('❌ Erreur');
+}
+
+async function loadNotifications() {
+    if (!currentUser?.id) return;
+    try {
+        notifications = await getNotifications(currentUser.id);
+        unreadCount = notifications.filter(n => !n.read).length;
+        updateSidebarBadge();
+    } catch (e) { console.error('loadNotifications error:', e); }
+}
+
+function updateSidebarBadge() {
+    const badge = document.getElementById('sidebarNotifBadge');
+    if (!badge) return;
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+async function loadAllNotifications() {
+    const container = document.getElementById('allNotificationsList');
+    if (!container) return;
+    await loadNotifications();
+    if (notifications.length === 0) {
+        container.innerHTML = '<div class="notification-empty">📭 Aucune notification</div>';
+        return;
+    }
+    container.innerHTML = notifications.map(n => `
+        <div class="notification-item ${!n.read ? 'unread' : ''}"
+             onclick="handleNotifClick(${n.id}, ${n.report_id || 'null'})"
+             title="${n.report_id ? 'Cliquez pour accéder au signalement' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                <div style="flex:1;">
+                    <span class="notif-type-badge notif-${n.type}">${getNotifLabel(n.type)}</span>
+                    <p class="notification-message" style="margin-top:6px;">${escapeHtml(n.message)}</p>
+                    ${n.report_id ? `<p style="font-size:11px; color:var(--accent); margin-top:4px; font-weight:500;">👆 Cliquer pour voir le signalement #${n.report_id}</p>` : ''}
+                </div>
+                ${!n.read ? '<span style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;margin-top:4px;"></span>' : ''}
+            </div>
+            <p class="notification-time" style="margin-top:6px;">${new Date(n.created_at).toLocaleString()}</p>
+        </div>
+    `).join('');
+}
+
+function getNotifLabel(type) {
+    return type === 'REPORT_CREATED' ? '📝 Signalement créé'
+        : type === 'REPORT_STATUS_CHANGED' ? '🔄 Statut mis à jour'
+        : '📢 Notification';
+}
+
+async function handleNotifClick(notifId, reportId) {
+    markNotificationAsRead(notifId).then(success => {
+        if (success) {
+            const n = notifications.find(n => n.id === notifId);
+            if (n) n.read = true;
             unreadCount = notifications.filter(n => !n.read).length;
             updateSidebarBadge();
-
-            if (reportId) {
-                const role = getUserRole();
-                if (role === 'admin' || role === 'superadmin') {
-                    showSection('all-reports');
-                } else {
-                    showSection('my-reports');
-                }
-            }
+            const section = document.getElementById('notifications-section');
+            if (section && section.style.display !== 'none') loadAllNotifications();
         }
+    });
 
-        function startNotificationPolling() {
-            if (notificationInterval) clearInterval(notificationInterval);
-            notificationInterval = setInterval(async () => {
-                if (currentUser?.id) {
-                    await loadNotifications();
-                }
-            }, 30000);
+    if (!reportId) return;
+
+    const role = getUserRole();
+
+    if (role === 'user') {
+        await showSection('my-reports');
+        setTimeout(() => highlightReport(reportId), 400);
+        return;
+    }
+
+    try {
+        const reports = await getAllReports();
+        const report = reports.find(r => r.id === reportId);
+        if (!report) {
+            showSection('by-category');
+            return;
         }
+        const categories = await getAllCategories();
+        const cat = categories.find(c => c.id === report.category);
+        const catName = cat ? cat.name : 'Catégorie';
+        showSection('by-category');
+        await openCategory(report.category, catName);
+        setTimeout(() => highlightReport(reportId), 400);
+    } catch(e) {
+        showSection('by-category');
+    }
+}
 
-        function stopNotificationPolling() {
-            if (notificationInterval) {
-                clearInterval(notificationInterval);
-                notificationInterval = null;
-            }
+function highlightReport(reportId) {
+    const el = document.querySelector(`[data-report-id="${reportId}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.transition = 'box-shadow 0.3s, border-color 0.3s';
+    el.style.boxShadow = '0 0 0 3px #2ecc71, 0 6px 20px rgba(46,204,113,0.3)';
+    el.style.borderColor = '#2ecc71';
+    setTimeout(() => {
+        el.style.boxShadow = '';
+        el.style.borderColor = '';
+    }, 3000);
+}
+
+function startNotificationPolling() {
+    if (notificationInterval) clearInterval(notificationInterval);
+    notificationInterval = setInterval(() => { if (currentUser?.id) loadNotifications(); }, 30000);
+}
+
+function stopNotificationPolling() {
+    if (notificationInterval) { clearInterval(notificationInterval); notificationInterval = null; }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+
+document.getElementById('reportForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.submitter || document.querySelector('#reportForm button[type="submit"]');
+    const orig = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Envoi...'; }
+    try {
+        const catVal = document.getElementById('category').value;
+        if (!catVal) { alert('❌ Sélectionnez une catégorie'); return; }
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
+        if (!lat || !lng) { alert('❌ Veuillez capturer votre position'); return; }
+        const imageFiles = document.getElementById('images').files;
+        const ok = await createReport({
+            description: document.getElementById('description').value,
+            latitude: lat, longitude: lng,
+            category: parseInt(catVal),
+            priority: document.getElementById('priority').value,
+            images: imageFiles
+        });
+        if (ok) {
+            alert('✅ Signalement créé !');
+            document.getElementById('reportForm').reset();
+            document.getElementById('geoStatus').textContent = 'Aucune position sélectionnée';
+            showSection('my-reports');
+            loadDashboardStats();
+            setTimeout(() => loadNotifications(), 2000);
+        } else { alert('❌ Erreur lors de la création.'); }
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+    }
+});
+
+document.getElementById('createAdminForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ok = await createAdmin({
+        username: document.getElementById('adminUsername').value,
+        email: document.getElementById('adminEmail').value,
+        password: document.getElementById('adminPassword').value
+    });
+    const msg = document.getElementById('adminMessage');
+    if (ok) {
+        msg.innerHTML = '<span style="color:green;">✅ Admin créé</span>';
+        document.getElementById('createAdminForm').reset();
+        loadUsersTable(); loadDashboardStats();
+        setTimeout(() => msg.innerHTML = '', 3000);
+    } else { msg.innerHTML = '<span style="color:red;">❌ Erreur</span>'; }
+});
+
+document.getElementById('addCategoryForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('categoryName').value;
+    const msg = document.getElementById('categoryMessage');
+    const ok = await createCategory(name);
+    if (ok) {
+        msg.innerHTML = '<span style="color:green;">✅ Catégorie ajoutée</span>';
+        document.getElementById('addCategoryForm').reset();
+        loadCategories(); loadCategoriesSelect();
+        setTimeout(() => msg.innerHTML = '', 2000);
+    } else { msg.innerHTML = '<span style="color:red;">❌ Erreur</span>'; }
+});
+
+function getImageUrl(rawUrl) {
+    if (!rawUrl) return '';
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) return rawUrl;
+    if (rawUrl.startsWith('/media/')) return rawUrl;
+    if (rawUrl.startsWith('/')) return '/media' + rawUrl;
+    return '/media/' + rawUrl;
+}
+
+const userCache = new Map();
+async function getUserById(userId) {
+    if (userCache.has(userId)) return userCache.get(userId);
+    const token = getToken();
+    try {
+        const response = await fetch(`${API_URL}/users/${userId}/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const user = await response.json();
+            userCache.set(userId, user);
+            return user;
         }
+        return null;
+    } catch (error) {
+        console.error(`Erreur getUserById(${userId}):`, error);
+        return null;
+    }
+}
 
-        // Event Listeners
-        document.getElementById('reportForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
+function openImageModal(url, reportId, imgIdx) {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('modalImage');
+    const caption = document.getElementById('modalCaption');
+    img.src = url;
+    img.onerror = () => { img.alt = 'Image non disponible'; };
+    caption.textContent = `Signalement #${reportId}${imgIdx > 0 ? ' — Image ' + (imgIdx + 1) : ''}`;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
 
-            const submitBtn = e.submitter || document.querySelector('#reportForm button[type="submit"]');
-            const originalText = submitBtn?.innerHTML;
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '⏳ Envoi en cours...';
-            }
+function closeImageModal(e) {
+    if (e && e.target !== document.getElementById('imageModal') && !e.target.classList.contains('modal-close')) return;
+    document.getElementById('imageModal').classList.remove('open');
+    document.getElementById('modalImage').src = '';
+    document.body.style.overflow = '';
+}
 
-            try {
-                const imagesInput = document.getElementById('images');
-                const images = imagesInput && imagesInput.files ? Array.from(imagesInput.files) : [];
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeImageModal({ target: document.getElementById('imageModal') });
+});
 
-                const categoryValue = document.getElementById('category').value;
-                if (!categoryValue) {
-                    alert('❌ Veuillez sélectionner une catégorie');
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalText;
-                    }
-                    return;
-                }
+checkAuth();
+loadUserInfo();
+window.addEventListener('beforeunload', stopNotificationPolling);
+</script>
 
-                const reportData = {
-                    description: document.getElementById('description').value,
-                    latitude: parseFloat(document.getElementById('latitude').value),
-                    longitude: parseFloat(document.getElementById('longitude').value),
-                    category: parseInt(categoryValue),
-                    priority: document.getElementById('priority').value,
-                    images: images
-                };
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let _reportMap = null;
+let _reportMarker = null;
 
-                const success = await createReport(reportData);
+function setLocationFields(lat, lng) {
+    document.getElementById('latitude').value = lat;
+    document.getElementById('longitude').value = lng;
+    document.getElementById('geoStatus').textContent = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
 
-                if (success) {
-                    alert('✅ Signalement créé avec succès !');
-                    document.getElementById('reportForm').reset();
-                    if (imagesInput) imagesInput.value = '';
-                    showSection('my-reports');
-                    loadDashboardStats();
-                    loadMyReports();
-                    setTimeout(() => loadNotifications(), 2000);
-                } else {
-                    alert('❌ Erreur lors de la création du signalement.');
-                }
-            } catch (error) {
-                console.error('❌ Unexpected error:', error);
-                alert('❌ Erreur inattendue: ' + error.message);
-            } finally {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                }
-            }
-        });
+function initReportMap(lat, lng) {
+    const mapDiv = document.getElementById('reportMapPicker');
+    mapDiv.style.display = 'block';
+    document.getElementById('mapHint').style.display = 'block';
+    if (_reportMap) {
+        _reportMap.setView([lat, lng], 15);
+        _reportMarker.setLatLng([lat, lng]);
+        return;
+    }
+    _reportMap = L.map('reportMapPicker').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(_reportMap);
+    _reportMarker = L.marker([lat, lng], { draggable: true }).addTo(_reportMap);
+    _reportMarker.bindPopup('📌 Glissez pour ajuster la position').openPopup();
+    _reportMarker.on('dragend', function (e) {
+        const pos = e.target.getLatLng();
+        setLocationFields(pos.lat, pos.lng);
+    });
+    _reportMap.on('click', function (e) {
+        _reportMarker.setLatLng(e.latlng);
+        setLocationFields(e.latlng.lat, e.latlng.lng);
+    });
+}
 
-        document.getElementById('createAdminForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const success = await createAdmin({
-                username: document.getElementById('adminUsername').value,
-                email: document.getElementById('adminEmail').value,
-                password: document.getElementById('adminPassword').value
-            });
-            const msgDiv = document.getElementById('adminMessage');
-            if (success) {
-                msgDiv.innerHTML = '<span style="color:green;">✅ Admin créé</span>';
-                document.getElementById('createAdminForm').reset();
-                loadUsersTable();
-                loadDashboardStats();
-                setTimeout(() => msgDiv.innerHTML = '', 3000);
-            } else {
-                msgDiv.innerHTML = '<span style="color:red;">❌ Erreur</span>';
-            }
-        });
+function captureLocation() {
+    const btn = document.getElementById('geoBtn');
+    const status = document.getElementById('geoStatus');
+    if (!navigator.geolocation) {
+        status.textContent = '❌ Géolocalisation non supportée.';
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = '⏳ Localisation...';
+    status.textContent = 'Recherche de votre position...';
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setLocationFields(lat, lng);
+            initReportMap(lat, lng);
+            btn.disabled = false;
+            btn.textContent = '📡 Utiliser ma position';
+        },
+        (err) => {
+            status.textContent = '⚠️ Impossible d\'obtenir la position. Cliquez sur la carte.';
+            initReportMap(36.7538, 3.0588);
+            btn.disabled = false;
+            btn.textContent = '📡 Réessayer';
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
 
-        document.getElementById('addCategoryForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('categoryName').value;
-            const msgDiv = document.getElementById('categoryMessage');
+document.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('#nav-create-report')) {
+        setTimeout(() => { if (_reportMap) _reportMap.invalidateSize(); }, 100);
+    }
+});
+</script>
 
-            const success = await createCategory(name);
-            if (success) {
-                msgDiv.innerHTML = '<span style="color:green;">✅ Catégorie ajoutée</span>';
-                document.getElementById('addCategoryForm').reset();
-                loadCategories();
-                loadCategoriesSelect();
-                setTimeout(() => msgDiv.innerHTML = '', 2000);
-            } else {
-                msgDiv.innerHTML = '<span style="color:red;">❌ Erreur</span>';
-            }
-        });
+<div id="imageModal" onclick="closeImageModal(event)">
+    <button class="modal-close" onclick="closeImageModal()">✕ Fermer</button>
+    <img id="modalImage" src="" alt="Signalement">
+    <div class="modal-caption" id="modalCaption"></div>
+</div>
 
-        checkAuth();
-        loadUserInfo();
-
-        window.addEventListener('beforeunload', function () {
-            stopNotificationPolling();
-        });
-    </script>
 </body>
-
 </html>

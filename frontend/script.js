@@ -1,56 +1,35 @@
-// Configuration
-const API_URL = 'http://localhost:8000/api';
-const REPORT_API_URL = 'http://localhost:8001/api';
-const NOTIF_API_URL = 'http://localhost:5000';  
-function getToken() {
-    return localStorage.getItem('access_token');
-}
+// ============================================================
+// API URLs — all traffic goes through Traefik on port 80
+// ============================================================
+const API_URL = 'http://localhost/api/auth';
+const REPORT_API_URL = 'http://localhost/api/reports';
+const NOTIF_API_URL = 'http://localhost/api/notification';
 
-function getUser() {
-    return JSON.parse(localStorage.getItem('user') || '{}');
-}
+function getToken() { return localStorage.getItem('access_token'); }
+function getUser() { return JSON.parse(localStorage.getItem('user') || '{}'); }
 
 function logout() {
     const refresh = localStorage.getItem('refresh_token');
     const token = localStorage.getItem('access_token');
-
-    // Send refresh token to server to blacklist it
     if (refresh && token) {
         fetch(`${API_URL}/logout/`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ refresh: refresh })
-        }).catch(() => {}); // Don't block UI if this fails
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ refresh })
+        }).catch(() => {});
     }
-
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     window.location.href = 'index.html';
 }
 
-function getUserRole() {
-    const user = getUser();
-    return user.role || 'user';
-}
+function getUserRole() { return getUser().role || 'user'; }
+function isAdmin() { const r = getUserRole(); return r === 'admin' || r === 'superadmin'; }
+function isSuperAdmin() { return getUserRole() === 'superadmin'; }
+function isUser() { return getUserRole() === 'user'; }
 
-function isAdmin() {
-    const role = getUserRole();
-    return role === 'admin' || role === 'superadmin';
-}
-
-function isSuperAdmin() {
-    return getUserRole() === 'superadmin';
-}
-
-function isUser() {
-    return getUserRole() === 'user';
-}
-
-// ============ AUTHENTIFICATION ============
+// ============ AUTH ============
 async function login(username, password) {
     try {
         const response = await fetch(`${API_URL}/login/`, {
@@ -58,17 +37,14 @@ async function login(username, password) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
-        
         const data = await response.json();
-        
         if (response.ok) {
             localStorage.setItem('access_token', data.access);
             localStorage.setItem('refresh_token', data.refresh);
             localStorage.setItem('user', JSON.stringify(data.user));
             return { success: true, user: data.user };
-        } else {
-            return { success: false, error: data.error || 'Identifiants incorrects' };
         }
+        return { success: false, error: data.error || 'Identifiants incorrects' };
     } catch (error) {
         return { success: false, error: 'Erreur de connexion au serveur' };
     }
@@ -81,14 +57,9 @@ async function register(userData) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
         });
-        
         const data = await response.json();
-        
-        if (response.ok) {
-            return { success: true, user: data.user };
-        } else {
-            return { success: false, error: JSON.stringify(data) };
-        }
+        if (response.ok) return { success: true, user: data.user };
+        return { success: false, error: JSON.stringify(data) };
     } catch (error) {
         return { success: false, error: 'Erreur de connexion au serveur' };
     }
@@ -97,32 +68,42 @@ async function register(userData) {
 async function verifyToken() {
     const token = getToken();
     if (!token) return false;
-    
     try {
         const response = await fetch(`${API_URL}/verify/`, {
-            method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         return response.ok;
-    } catch (error) {
-        return false;
-    }
+    } catch { return false; }
 }
 
-// ============ GESTION DES UTILISATEURS (Super Admin) ============
+async function refreshToken() {
+    const refresh = localStorage.getItem('refresh_token');
+    if (!refresh) return false;
+    try {
+        const response = await fetch(`${API_URL}/refresh/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh })
+        });
+        if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('access_token', data.access);
+            return true;
+        }
+        return false;
+    } catch { return false; }
+}
+
+// ============ USERS (Super Admin) ============
 async function getAllUsers() {
     const token = getToken();
     try {
         const response = await fetch(`${API_URL}/users/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) {
-            return await response.json();
-        }
+        if (response.ok) return await response.json();
         return [];
-    } catch (error) {
-        return [];
-    }
+    } catch { return []; }
 }
 
 async function createAdmin(userData) {
@@ -130,16 +111,11 @@ async function createAdmin(userData) {
     try {
         const response = await fetch(`${API_URL}/create-admin/`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(userData)
         });
         return response.ok;
-    } catch (error) {
-        return false;
-    }
+    } catch { return false; }
 }
 
 async function deleteUser(userId) {
@@ -150,9 +126,7 @@ async function deleteUser(userId) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         return response.ok;
-    } catch (error) {
-        return false;
-    }
+    } catch { return false; }
 }
 
 async function updateUser(userId, userData) {
@@ -160,112 +134,41 @@ async function updateUser(userId, userData) {
     try {
         const response = await fetch(`${API_URL}/users/${userId}/update/`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(userData)
         });
         return response.ok;
-    } catch (error) {
-        return false;
-    }
+    } catch { return false; }
 }
 
-// ============ GESTION DES SIGNALEMENTS ============
-// script.js - Ajouter cette fonction
-
-async function refreshToken() {
-    const refresh = localStorage.getItem('refresh_token');
-    if (!refresh) return false;
-    
-    try {
-        const response = await fetch(`${API_URL}/refresh/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh: refresh })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem('access_token', data.access);
-            console.log('✅ Token refreshed successfully');
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.error('❌ Token refresh failed:', error);
-        return false;
-    }
-}
-// script.js - Remplacer getAllReports
+// ============ REPORTS ============
 async function getAllReports() {
     const token = getToken();
-    if (!token) {
-        console.error('❌ getAllReports: No token found');
-        return [];
-    }
-    
+    console.log('📡 getAllReports - Fetching from:', `${REPORT_API_URL}/`);
     try {
-        console.log('📡 getAllReports - Fetching from:', `${REPORT_API_URL}/reports/`);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const response = await fetch(`${REPORT_API_URL}/reports/`, {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            signal: controller.signal
+        const response = await fetch(`${REPORT_API_URL}/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        clearTimeout(timeoutId);
-        
         console.log('📡 getAllReports - Response status:', response.status);
-        
-        if (response.status === 401) {
-            console.log('🔄 Token expired, trying to refresh...');
-            const refreshed = await refreshToken();
-            if (refreshed) {
-                return getAllReports();
-            } else {
-                // Token refresh failed, redirect to login
-                logout();
-                return [];
-            }
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`✅ getAllReports: ${data.length} reports loaded`);
+            return data;
         }
-        
-        if (!response.ok) {
-            console.error('❌ getAllReports failed with status:', response.status);
-            return [];
-        }
-        
-        const data = await response.json();
-        console.log(`✅ getAllReports: ${data.length} reports loaded`);
-        return data;
-        
+        return [];
     } catch (error) {
-        if (error.name === 'AbortError') {
-            console.error('❌ getAllReports timeout');
-        } else {
-            console.error('❌ getAllReports fetch error:', error);
-        }
+        console.error('Erreur getAllReports:', error);
         return [];
     }
 }
+
 async function getUserReports() {
     const token = getToken();
     try {
-        const response = await fetch(`${REPORT_API_URL}/reports/`, {
+        const response = await fetch(`${REPORT_API_URL}/my_reports/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) {
-            const allReports = await response.json();
-            const user = getUser();
-            return allReports.filter(r => r.user_id === user.id);
-        }
+        if (response.ok) return await response.json();
         return [];
     } catch (error) {
         console.error('Erreur getUserReports:', error);
@@ -273,54 +176,73 @@ async function getUserReports() {
     }
 }
 
-// script.js - Remplacer la fonction createReport par celle-ci
-
 async function createReport(reportData) {
     const token = getToken();
+    
+    console.log('🔑 Token:', token ? 'Present' : 'Missing');
+    console.log('📦 Report data:', reportData);
+    
     if (!token) {
         console.error('❌ No token found');
         return false;
     }
     
-    console.log('📤 Creating report with data:', reportData);
-    
-    // TOUJOURS utiliser FormData pour éviter les problèmes CORS
-    const formData = new FormData();
-    formData.append('description', reportData.description);
-    formData.append('latitude', reportData.latitude);
-    formData.append('longitude', reportData.longitude);
-    formData.append('category', reportData.category);
-    formData.append('priority', reportData.priority || 'medium');
-    
-    // Ajouter les images si présentes
-    if (reportData.images && reportData.images.length > 0) {
-        for (let i = 0; i < reportData.images.length; i++) {
-            formData.append('uploaded_images', reportData.images[i]);
-        }
-    }
+    const hasImages = reportData.images && reportData.images.length > 0;
+    console.log('📸 Has images:', hasImages);
     
     try {
-        console.log('📡 Sending request to:', `${REPORT_API_URL}/reports/`);
+        let response;
+        const url = `${REPORT_API_URL}/`;
+        console.log('🌐 URL:', url);
         
-        const response = await fetch(`${REPORT_API_URL}/reports/`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-                // ⚠️ NE PAS mettre Content-Type avec FormData - le navigateur le définit automatiquement
-            },
-            body: formData
-        });
+        if (hasImages) {
+            const formData = new FormData();
+            formData.append('description', reportData.description);
+            formData.append('latitude', reportData.latitude);
+            formData.append('longitude', reportData.longitude);
+            formData.append('category', reportData.category);
+            formData.append('priority', reportData.priority);
+            
+            for (let i = 0; i < reportData.images.length; i++) {
+                formData.append('uploaded_images', reportData.images[i]);
+            }
+            
+            response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+        } else {
+            const bodyData = {
+                description: reportData.description,
+                latitude: reportData.latitude,
+                longitude: reportData.longitude,
+                category: reportData.category,
+                priority: reportData.priority
+            };
+            console.log('📤 Body JSON:', bodyData);
+            
+            response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(bodyData)
+            });
+        }
         
         console.log('📡 Response status:', response.status);
         
         if (response.ok) {
-            // Lire la réponse (optionnel)
-            const data = await response.json().catch(() => ({}));
-            console.log('✅ Report created successfully:', data);
+            const data = await response.json();
+            console.log('✅ Success:', data);
             return true;
         } else {
             const errorText = await response.text();
-            console.error('❌ Server error:', response.status, errorText);
+            console.error('❌ Error response:', errorText);
             return false;
         }
     } catch (error) {
@@ -329,16 +251,13 @@ async function createReport(reportData) {
     }
 }
 
-async function updateReportStatus(reportId, status) {
+async function updateReportStatus(reportId, newStatus) {
     const token = getToken();
     try {
-        const response = await fetch(`${REPORT_API_URL}/reports/${reportId}/`, {
+        const response = await fetch(`${REPORT_API_URL}/${reportId}/`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ status })
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ status: newStatus })
         });
         return response.ok;
     } catch (error) {
@@ -347,105 +266,34 @@ async function updateReportStatus(reportId, status) {
     }
 }
 
-// ============ CHECK AUTH ============
-function checkAuth() {
-    if (!getToken() && !window.location.pathname.includes('login') && !window.location.pathname.includes('register') && !window.location.pathname.includes('index')) {
-        window.location.href = 'login.html';
-    }
-}
-// ============ GESTION DES NOTIFICATIONS ============
-async function getNotifications(userId) {
+// ============ CATEGORIES ============
+async function getAllCategories() {
     const token = getToken();
+    const url = `${REPORT_API_URL.replace('/reports', '/categories')}/`;
+    console.log('Fetching categories from:', url);
     try {
-        const response = await fetch(`http://localhost:5000/api/notification/`, {
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
             const data = await response.json();
-            // Filtrer par user_id si nécessaire
-            return data.filter(n => n.user_id === userId);
-        }
-        return [];
-    } catch (error) {
-        console.error('Erreur getNotifications:', error);
-        return [];
-    }
-}
-
-async function markNotificationAsRead(notificationId) {
-    const token = getToken();
-    try {
-        const response = await fetch(`http://localhost:5000/api/notification/${notificationId}/mark_read/`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        return response.ok;
-    } catch (error) {
-        console.error('Erreur markNotificationAsRead:', error);
-        return false;
-    }
-}
-async function getUnreadCount(userId) {
-    const notifications = await getNotifications(userId);
-    return notifications.filter(n => !n.read).length;
-}
-
-// ============ GESTION DES CATÉGORIES (Super Admin) ============
-// script.js - Modifier getAllCategories
-async function getAllCategories() {
-    const token = getToken();
-    try {
-        console.log('Fetching categories from:', `${REPORT_API_URL}/categories/`);
-        
-        // ✅ Ajouter un timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const response = await fetch(`${REPORT_API_URL}/categories/`, {
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-            const data = await response.json();
             console.log('Categories loaded:', data);
             return data;
-        } else {
-            console.error('Response not OK:', response.status, response.statusText);
-            return [];
         }
+        return [];
     } catch (error) {
         console.error('Erreur getAllCategories:', error);
-        // ✅ Retourner des catégories par défaut si le service est inaccessible
-        return [
-            { id: 1, name: "🚧 Routes" },
-            { id: 2, name: "💡 Éclairage public" },
-            { id: 3, name: "🗑️ Déchets" },
-            { id: 4, name: "🌳 Espaces verts" },
-            { id: 5, name: "🚰 Eau et assainissement" },
-            { id: 6, name: "🚦 Signalisation" }
-        ];
+        return [];
     }
 }
 
 async function createCategory(name) {
     const token = getToken();
     try {
-        const response = await fetch(`${REPORT_API_URL}/categories/`, {
+        const response = await fetch(`${REPORT_API_URL.replace('/reports', '/categories')}/`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ name: name })
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ name })
         });
         return response.ok;
     } catch (error) {
@@ -457,7 +305,7 @@ async function createCategory(name) {
 async function deleteCategory(categoryId) {
     const token = getToken();
     try {
-        const response = await fetch(`${REPORT_API_URL}/categories/${categoryId}/`, {
+        const response = await fetch(`${REPORT_API_URL.replace('/reports', '/categories')}/${categoryId}/`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -471,7 +319,6 @@ async function deleteCategory(categoryId) {
 async function loadCategoriesSelect() {
     const select = document.getElementById('category');
     if (!select) return;
-    
     try {
         const categories = await getAllCategories();
         select.innerHTML = '<option value="">-- Sélectionner une catégorie --</option>';
@@ -479,7 +326,53 @@ async function loadCategoriesSelect() {
             select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
         });
     } catch(e) {
-        console.error(e);
+        console.error('Erreur loadCategoriesSelect:', e);
     }
 }
 
+// ============ NOTIFICATIONS ============
+async function getNotifications() {
+    const token = getToken();
+    try {
+        const response = await fetch(`${NOTIF_API_URL}/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) return await response.json();
+        return [];
+    } catch (error) {
+        console.error('Erreur getNotifications:', error);
+        return [];
+    }
+}
+
+
+async function markNotificationAsRead(notificationId) {
+    const token = getToken();
+    try {
+        // Assure-toi que c'est /read/ et pas /mark_read/
+        const response = await fetch(`${NOTIF_API_URL}/${notificationId}/read/`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return response.ok;
+    } catch (error) {
+        console.error('Erreur markNotificationAsRead:', error);
+        return false;
+    }
+}
+
+async function getUnreadCount() {
+    try {
+        const notifications = await getNotifications();
+        return notifications.filter(n => !n.is_read).length;
+    } catch { return 0; }
+}
+
+// ============ AUTH CHECK ============
+function checkAuth() {
+    const publicPages = ['login', 'register', 'index'];
+    const isPublic = publicPages.some(p => window.location.pathname.includes(p));
+    if (!getToken() && !isPublic) {
+        window.location.href = 'login.html';
+    }
+}

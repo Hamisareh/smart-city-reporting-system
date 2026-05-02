@@ -52,32 +52,55 @@ class ReportViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user_id = getattr(self.request, 'user_id', None)
         user_role = getattr(self.request, 'user_role', 'user')
-
         if user_id is None:
             return Report.objects.none()
-
         if user_role in ['admin', 'superadmin']:
             return Report.objects.all().order_by('-created_at')
-
         return Report.objects.filter(user_id=user_id).order_by('-created_at')
+
+    def _get_reporter_username(self, user_id):
+        """Fetch reporter username from auth-service."""
+        try:
+            import requests
+            resp = requests.get(
+                f'http://auth-service:8000/api/users/{user_id}/',
+                timeout=3
+            )
+            if resp.ok:
+                return resp.json().get('username', f'User #{user_id}')
+        except Exception:
+            pass
+        return f'User #{user_id}'
 
     def perform_create(self, serializer):
         user_id = getattr(self.request, 'user_id', None)
         report = serializer.save(user_id=user_id)
 
-        # ✅ إشعار للمستخدم اللي خلق التقرير
+        # ✅ Resolve category name and reporter username for rich notifications
+        try:
+            category_name = report.category.name
+        except Exception:
+            category_name = None
+        reporter_username = self._get_reporter_username(user_id)
+
+        # Notify the user who created the report
         send_notification(
             user_id=user_id,
             report_id=report.id,
             notification_type="REPORT_CREATED",
-            is_for_admin=False
+            is_for_admin=False,
+            category_name=category_name,
+            reporter_username=reporter_username,
         )
 
-        # ✅ إشعار لجميع المشرفين (admins)
-        self._notify_admins(report.id, "NEW_REPORT_CREATED")
+        # Notify all admins
+        self._notify_admins(report.id, "NEW_REPORT_CREATED",
+                            category_name=category_name,
+                            reporter_username=reporter_username)
 
-    def _notify_admins(self, report_id, notification_type):
-        """إرسال إشعار لجميع المشرفين"""
+    def _notify_admins(self, report_id, notification_type,
+                       category_name=None, reporter_username=None):
+        """Send notification to all admins and superadmins."""
         try:
             import requests
             response = requests.get('http://auth-service:8000/api/admins/', timeout=3)
@@ -88,7 +111,9 @@ class ReportViewSet(viewsets.ModelViewSet):
                         user_id=admin['id'],
                         report_id=report_id,
                         notification_type=notification_type,
-                        is_for_admin=True
+                        is_for_admin=True,
+                        category_name=category_name,
+                        reporter_username=reporter_username,
                     )
                 logger.info(f"✅ Notified {len(admins)} admins about report {report_id}")
         except Exception as e:
@@ -98,7 +123,6 @@ class ReportViewSet(viewsets.ModelViewSet):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         old_status = instance.status
-        user_role = getattr(request, 'user_role', 'user')
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -111,15 +135,21 @@ class ReportViewSet(viewsets.ModelViewSet):
                 old_status=old_status,
                 new_status=new_status
             )
-            logger.info(f"Status changed: report {instance.id} : {old_status} to {new_status}")
+            logger.info(f"Status changed: report {instance.id}: {old_status} → {new_status}")
 
-            # ✅ إشعار للمستخدم صاحب التقرير فقط (مش للمشرفين)
+            # ✅ Include category name so notification message is informative
+            try:
+                category_name = instance.category.name
+            except Exception:
+                category_name = None
+
             send_notification(
                 user_id=instance.user_id,
                 report_id=instance.id,
                 notification_type="REPORT_STATUS_CHANGED",
                 new_status=new_status,
-                is_for_admin=False
+                is_for_admin=False,
+                category_name=category_name,
             )
 
         return Response(serializer.data)
@@ -137,32 +167,16 @@ class ReportViewSet(viewsets.ModelViewSet):
     def stats(self, request):
         user_id = getattr(request, 'user_id', None)
         user_role = getattr(request, 'user_role', 'user')
-
         if not user_id:
-            return Response({'error': 'Non authentifie'}, status=401)
-
+            return Response({'error': 'Non authentifié'}, status=401)
         if user_role in ['admin', 'superadmin']:
             reports_qs = Report.objects.all()
         else:
             reports_qs = Report.objects.filter(user_id=user_id)
-
         stats = reports_qs.values('status').annotate(count=Count('status'))
-
-        result = {
-            'total': reports_qs.count(),
-            'pending': 0,
-            'in_progress': 0,
-            'resolved': 0
-        }
-
+        result = {'total': reports_qs.count(), 'pending': 0, 'in_progress': 0, 'resolved': 0}
         for stat in stats:
-            if stat['status'] == 'pending':
-                result['pending'] = stat['count']
-            elif stat['status'] == 'in_progress':
-                result['in_progress'] = stat['count']
-            elif stat['status'] == 'resolved':
-                result['resolved'] = stat['count']
-
+            result[stat['status']] = stat['count']
         return Response(result)
 
     @action(detail=True, methods=['get'])

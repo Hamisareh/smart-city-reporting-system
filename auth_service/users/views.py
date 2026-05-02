@@ -163,3 +163,35 @@ class PublicAdminListView(generics.ListAPIView):
 
     def get_queryset(self):
         return User.objects.filter(role__in=['admin', 'superadmin'])
+
+
+# Ajouter cette classe
+
+class UserDetailView(generics.RetrieveAPIView):
+    """
+    Get a single user by ID.
+    Accessible to: superadmin (all users), admin (all users), user (only themselves)
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    
+    def get_permissions(self):
+        from rest_framework.permissions import IsAuthenticated
+        return [IsAuthenticated()]
+    
+    def get_object(self):
+        user_id = self.kwargs.get('pk')
+        requesting_user = self.request.user
+        
+        # Superadmin can see anyone
+        if requesting_user.role == 'superadmin':
+            return User.objects.get(pk=user_id)
+        # Admin can see anyone
+        elif requesting_user.role == 'admin':
+            return User.objects.get(pk=user_id)
+        # Regular user can only see themselves
+        elif requesting_user.id == user_id:
+            return requesting_user
+        else:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You don't have permission to view this user")

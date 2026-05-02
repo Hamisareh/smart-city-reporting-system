@@ -1,0 +1,27 @@
+services:
+  report-service:
+    build: .
+    container_name: report-service
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=report_service.settings
+      - TZ=Africa/Algiers
+      - AUTH_SERVICE_URL=http://auth-service:8000  # ← CHANGÉ : utiliser nom du conteneur
+      - RABBITMQ_HOST=rabbitmq  # ← CHANGÉ : utiliser nom du conteneur
+      - CONSUL_URL=http://consul:8500
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5000  # ← CHANGÉ
+      - SERVER_NAME=report-server
+      - SERVER_IP=192.168.100.103
+    volumes:
+      - .:/app
+      - ./media:/app/media
+    networks:
+      - wams-network  # ← CHANGÉ : report-network → wams-network
+    command: python manage.py runserver 0.0.0.0:8001
+
+networks:
+  wams-network:  # ← CHANGÉ
+    external: true  # ← AJOUTÉ

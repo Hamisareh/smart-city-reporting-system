@@ -1,0 +1,49 @@
+services:
+  notification-service:
+    build: .
+    container_name: notification-service
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=notification_service.settings
+      - TZ=Africa/Algiers
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RUN_MAIN=true
+      - AUTH_SERVICE_URL=http://auth-service:8000  # ← CHANGÉ
+      - REPORT_SERVICE_URL=http://report-service:8001  # ← CHANGÉ
+      - SERVER_NAME=notification-server
+      - SERVER_IP=192.168.100.104
+    volumes:
+      - .:/app
+    networks:
+      - wams-network  # ← CHANGÉ : notification-network → wams-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: python manage.py runserver 0.0.0.0:5000
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      SERVER_NAME: rabbitmq-server
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - wams-network  # ← CHANGÉ : notification-network → wams-network
+
+networks:
+  wams-network:  # ← CHANGÉ
+    external: true  # ← AJOUTÉ

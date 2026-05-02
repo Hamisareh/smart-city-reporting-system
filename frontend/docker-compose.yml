@@ -1,0 +1,30 @@
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ../traefik.yml:/etc/traefik/traefik.yml:ro   
+      - ../dynamic.yml:/etc/traefik/dynamic.yml:ro   
+    networks:
+      - wams-network  # ← CHANGÉ : frontend-network → wams-network
+    environment:
+      - SERVER_NAME=frontend-server
+      - SERVER_IP=192.168.100.101
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    volumes:
+      - .:/usr/share/nginx/html:ro
+    networks:
+      - wams-network  # ← CHANGÉ : frontend-network → wams-network
+    environment:
+      - SERVER_NAME=frontend-nginx
+      - SERVER_IP=192.168.100.101
+
+networks:
+  wams-network:  # ← CHANGÉ : frontend-network → wams-network
+    external: true  # ← AJOUTÉ : utilise le réseau existant

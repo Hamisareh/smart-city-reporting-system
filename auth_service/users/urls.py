@@ -1,4 +1,4 @@
-#users/urls.py
+# users/urls.py
 from django.urls import path
 from .views import (
     RegisterView, 
@@ -7,10 +7,11 @@ from .views import (
     VerifyUserView, 
     CustomLoginView,
     LogoutView,
-     RefreshTokenView,
+    RefreshTokenView,
     UserListView,        
     UserDeleteView,      
     UserUpdateView,
+    UserDetailView,          
     PublicAdminListView,       
 )
 
@@ -23,7 +24,8 @@ urlpatterns = [
     path('profile/', ProfileView.as_view()),
     path('verify/', VerifyUserView.as_view()),
     path('users/', UserListView.as_view()),           
-    path('users/<int:pk>/', UserDeleteView.as_view()), 
+    path('users/<int:pk>/', UserDetailView.as_view()),     
+    path('users/<int:pk>/delete/', UserDeleteView.as_view()), 
     path('users/<int:pk>/update/', UserUpdateView.as_view()), 
     path('admins/', PublicAdminListView.as_view()),
 ]
